@@ -10,7 +10,7 @@ raw responses plus JSON, Markdown, and HTML reports.
 Install the tagged release in one command:
 
 ```bash
-python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.1.0/quanttrio_llmbench-0.1.0-py3-none-any.whl"
+python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.1.1/quanttrio_llmbench-0.1.1-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:

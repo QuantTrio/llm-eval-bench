@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 - 2026-08-28
+
+- Make the public documentation and examples model-neutral.
+
 ## 0.1.0 - 2026-08-28
 
 - Add automatic OpenAI-compatible model discovery.
@@ -9,4 +13,3 @@
 - Add streaming TTFT/TPOT, latency percentiles, throughput, retry, and error metrics.
 - Add dataset/category/question-type reports and quantization regression comparison.
 - Add a 157-entry DataLearner benchmark catalog snapshot.
-
