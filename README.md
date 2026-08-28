@@ -35,7 +35,7 @@ llmbench run \
   --concurrency 32 \
   --temperature 0 \
   --max-tokens 1024 \
-  --output-dir runs/qwen-quantized
+  --output-dir runs/candidate-model
 ```
 
 For a local server that does not require authentication, use `OPENAI_API_KEY=EMPTY`.
@@ -108,7 +108,7 @@ fast regression use rather than claiming a full official benchmark score.
 | DROP | Reading Comprehension | 500 | token F1 | 9 |
 | TruthfulQA MC1 | Truthfulness | 200 | accuracy | 4 |
 | HellaSwag | Common Sense Reasoning | 500 | accuracy | 3 |
-| MMLU-Redux | Comprehensive | 500 | corrected-key accuracy | Qwen reference |
+| MMLU-Redux | Comprehensive | 500 | corrected-key accuracy | n/a |
 
 \* Report counts are a 2026-08-28 snapshot used only to prioritize broadly reported datasets.
 They do not imply that this tool reproduces every result listed by DataLearner.
@@ -120,18 +120,6 @@ a separate judge model remain catalogued but are not presented as supported scor
 
 C-Eval data is CC BY-NC-SA 4.0 and is restricted to non-commercial use. See
 [THIRD_PARTY_DATASETS.md](THIRD_PARTY_DATASETS.md) before distributing or using bundled data.
-
-## Qwen3.5 model-card alignment
-
-The benchmark selection follows the text/objective portions of the
-[Qwen3.5-122B-A10B model card](https://www.modelscope.cn/models/Qwen/Qwen3.5-122B-A10B):
-MMLU-Pro, MMLU-Redux, C-Eval, and GPQA Diamond are represented directly. Multiple-choice
-prompts request `{"answer":"C"}` and math prompts request a boxed final answer, matching the
-card's formatting guidance.
-
-Model-card scores are not directly comparable unless the dataset version, prompt, sampling,
-reasoning mode, output length, and scorer are identical. For quantization regression, keep
-those settings fixed. The recommended deterministic baseline is `--temperature 0 --n-samples 1`.
 
 ## Reports
 
@@ -154,15 +142,15 @@ are never written to reports.
 A successful command prints the selected model and the four artifact paths, for example:
 
 ```text
-Model: Qwen3.5-122B-A10B
+Model: candidate-model
 Requests: 800  Successful: 800  Score: 0.7425
-Summary: runs/qwen-quantized/summary.json
-Raw results: runs/qwen-quantized/raw_results.jsonl
-Markdown: runs/qwen-quantized/report.md
-HTML: runs/qwen-quantized/report.html
+Summary: runs/candidate-model/summary.json
+Raw results: runs/candidate-model/raw_results.jsonl
+Markdown: runs/candidate-model/report.md
+HTML: runs/candidate-model/report.html
 ```
 
-The numbers above are illustrative, not a claimed Qwen score. The actual `summary.json` includes
+The numbers above are illustrative, not a claimed model score. The actual `summary.json` includes
 independent results for each dataset category and question type:
 
 ```json
@@ -189,17 +177,17 @@ independent results for each dataset category and question type:
 }
 ```
 
-Do not compare those illustrative values with a model card. A meaningful FP16/BF16-versus-
-quantized comparison uses identical datasets, prompts, sampling parameters, concurrency, and
-server configuration; `llmbench compare` then reports the regression explicitly.
+A meaningful FP16/BF16-versus-quantized comparison uses identical datasets, prompts, sampling
+parameters, concurrency, and server configuration; `llmbench compare` then reports the
+regression explicitly.
 
 Compare a baseline and quantized candidate:
 
 ```bash
 llmbench compare \
-  --baseline runs/qwen-fp16/summary.json \
-  --candidate runs/qwen-awq/summary.json \
-  --report reports/qwen-awq-vs-fp16.html
+  --baseline runs/baseline-fp16/summary.json \
+  --candidate runs/candidate-quantized/summary.json \
+  --report reports/quantized-vs-fp16.html
 ```
 
 The comparison reports per-dataset absolute/relative score changes, throughput and QPS changes,

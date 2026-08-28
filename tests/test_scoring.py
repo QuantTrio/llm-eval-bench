@@ -33,7 +33,7 @@ def test_parse_math_formats(output: str, expected: str) -> None:
     assert parse_math(output) == expected
 
 
-def test_multiple_choice_prompt_uses_model_card_json_contract() -> None:
+def test_multiple_choice_prompt_uses_json_contract() -> None:
     item = DatasetItem(
         id="q1",
         dataset="test",
