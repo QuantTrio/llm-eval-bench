@@ -1,0 +1,10 @@
+{"id":"stress-000","dataset":"stress","type":"stress","question":"Explain why deterministic evaluation settings matter for quantization regression.","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-001","dataset":"stress","type":"stress","question":"Summarize the trade-off between model latency and throughput in three bullets.","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-002","dataset":"stress","type":"stress","question":"Write a short Python function that computes a percentile from sorted values.","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-003","dataset":"stress","type":"stress","question":"Give a concise explanation of mixture-of-experts routing.","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-004","dataset":"stress","type":"stress","question":"用三句话解释模型量化为什么可能影响准确率。","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-005","dataset":"stress","type":"stress","question":"列出并发压测中需要单独统计的四类错误。","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-006","dataset":"stress","type":"stress","question":"Compare exact match and semantic similarity metrics.","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-007","dataset":"stress","type":"stress","question":"Describe one way to detect truncated model responses.","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-008","dataset":"stress","type":"stress","question":"What is time to first token and why does it matter?","answer":null,"metadata":{"synthetic":true}}
+{"id":"stress-009","dataset":"stress","type":"stress","question":"Explain how a fixed random seed improves benchmark reproducibility.","answer":null,"metadata":{"synthetic":true}}

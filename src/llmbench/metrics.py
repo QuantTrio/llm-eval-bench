@@ -1,0 +1,158 @@
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+from statistics import mean
+from typing import Any
+
+from .schemas import RequestResult
+
+
+def percentile(values: list[float], quantile: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    if len(ordered) == 1:
+        return ordered[0]
+    position = (len(ordered) - 1) * quantile
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    fraction = position - lower
+    return ordered[lower] + (ordered[upper] - ordered[lower]) * fraction
+
+
+def _distribution(values: list[float]) -> dict[str, float | None]:
+    return {
+        "p50": percentile(values, 0.50),
+        "p90": percentile(values, 0.90),
+        "p95": percentile(values, 0.95),
+        "p99": percentile(values, 0.99),
+    }
+
+
+def summarize(
+    results: list[RequestResult],
+    *,
+    run_id: str,
+    mode: str,
+    model: str,
+    base_url: str,
+    elapsed_seconds: float,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    total = len(results)
+    successful = [result for result in results if result.error is None]
+    scored = [result for result in results if result.score is not None]
+    latency = [result.latency_ms for result in successful]
+    ttft = [result.ttft_ms for result in successful if result.ttft_ms is not None]
+    tpot = [result.tpot_ms for result in successful if result.tpot_ms is not None]
+    errors = Counter(result.error_type or "unknown" for result in results if result.error)
+
+    overall_score = mean(result.score or 0.0 for result in scored) if scored else None
+    quality: dict[str, Any] = {
+        "scored_samples": len(scored),
+        "mean_score": overall_score,
+        "accuracy": overall_score,
+        "parse_failed": sum(result.parse_failed for result in scored),
+        "parse_fail_rate": (
+            sum(result.parse_failed for result in scored) / len(scored) if scored else None
+        ),
+        "by_dataset": {},
+        "by_category": {},
+        "by_question_type": {},
+    }
+    grouped_dataset: dict[str, list[RequestResult]] = defaultdict(list)
+    grouped_category: dict[str, list[RequestResult]] = defaultdict(list)
+    grouped_type: dict[str, list[RequestResult]] = defaultdict(list)
+    grouped_question: dict[tuple[str, str], list[RequestResult]] = defaultdict(list)
+    for result in scored:
+        grouped_dataset[result.dataset].append(result)
+        grouped_category[result.benchmark_category].append(result)
+        grouped_type[result.question_type].append(result)
+        grouped_question[(result.dataset, result.question_id)].append(result)
+    for dataset, rows in sorted(grouped_dataset.items()):
+        quality["by_dataset"][dataset] = {
+            "samples": len(rows),
+            "questions": len({row.question_id for row in rows}),
+            "metric": rows[0].metric,
+            "mean_score": mean(row.score or 0.0 for row in rows),
+            "accuracy": mean(row.score or 0.0 for row in rows),
+            "parse_fail_rate": sum(row.parse_failed for row in rows) / len(rows),
+        }
+    for category, rows in sorted(grouped_category.items()):
+        dataset_scores = [
+            quality["by_dataset"][dataset]["mean_score"]
+            for dataset in sorted({row.dataset for row in rows})
+        ]
+        quality["by_category"][category] = {
+            "datasets": sorted({row.dataset for row in rows}),
+            "samples": len(rows),
+            "macro_mean_score": mean(dataset_scores),
+            "sample_mean_score": mean(row.score or 0.0 for row in rows),
+        }
+    for question_type, rows in sorted(grouped_type.items()):
+        quality["by_question_type"][question_type] = {
+            "samples": len(rows),
+            "mean_score": mean(row.score or 0.0 for row in rows),
+        }
+    if grouped_question:
+        first_scores = []
+        pass_scores = []
+        majority_scores = []
+        consistency = []
+        for rows in grouped_question.values():
+            ordered = sorted(rows, key=lambda row: row.sample_id)
+            first_scores.append(ordered[0].score or 0.0)
+            pass_scores.append(float(any((row.score or 0.0) > 0 for row in ordered)))
+            answers = [row.parsed_answer for row in ordered if row.parsed_answer is not None]
+            if answers:
+                majority = Counter(answers).most_common(1)[0][0]
+                matching = next((row for row in ordered if row.parsed_answer == majority), None)
+                majority_scores.append(float(bool(matching and (matching.score or 0.0) > 0)))
+                consistency.append(float(len(set(answers)) == 1 and len(answers) == len(ordered)))
+            else:
+                majority_scores.append(0.0)
+                consistency.append(0.0)
+        quality.update(
+            {
+                "accuracy_at_1": mean(first_scores),
+                "pass_at_k": mean(pass_scores),
+                "majority_at_k": mean(majority_scores),
+                "consistency_at_k": mean(consistency),
+            }
+        )
+
+    performance = {
+        "total_requests": total,
+        "successful_requests": len(successful),
+        "failed_requests": total - len(successful),
+        "elapsed_seconds": elapsed_seconds,
+        "qps": total / elapsed_seconds if elapsed_seconds > 0 else 0.0,
+        "successful_qps": len(successful) / elapsed_seconds if elapsed_seconds > 0 else 0.0,
+        "input_tokens_per_second": (
+            sum(row.input_tokens for row in successful) / elapsed_seconds
+            if elapsed_seconds > 0
+            else 0.0
+        ),
+        "output_tokens_per_second": (
+            sum(row.output_tokens for row in successful) / elapsed_seconds
+            if elapsed_seconds > 0
+            else 0.0
+        ),
+        "error_rate": (total - len(successful)) / total if total else 0.0,
+        "timeout_rate": errors.get("timeout", 0) / total if total else 0.0,
+        "truncated_responses": sum(row.finish_reason == "length" for row in successful),
+        "latency_ms": _distribution(latency),
+        "ttft_ms": _distribution(ttft),
+        "tpot_ms": _distribution(tpot),
+        "errors": dict(sorted(errors.items())),
+    }
+    return {
+        "schema_version": 1,
+        "run_id": run_id,
+        "mode": mode,
+        "model": model,
+        "base_url": base_url,
+        "config": config,
+        "quality": quality,
+        "performance": performance,
+    }

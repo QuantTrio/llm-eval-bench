@@ -1,0 +1,19 @@
+Bundled benchmark data notices
+================================
+
+The llmbench source code is licensed under Apache-2.0. Bundled benchmark records
+retain their upstream licenses:
+
+* MMLU-Pro: Apache-2.0, TIGER-Lab/MMLU-Pro revision b189ec7
+* MMLU-Redux: CC BY 4.0, aryopg/mmlu-redux revision 4563cfa
+* GPQA Diamond: CC BY 4.0, idavidrein/gpqa revision 56686c0
+* GSM8K: MIT, openai/grade-school-math revision 3101c7d
+* C-Eval: CC BY-NC-SA 4.0, ceval/ceval-exam revision 617524a
+  (non-commercial use only)
+* HellaSwag: MIT, Rowan/hellaswag revision 218ec52
+* TruthfulQA: Apache-2.0, sylinrl/TruthfulQA revision d71c110
+* DROP: Apache-2.0, OpenAI simple-evals DROP v0 development set
+* stress: Apache-2.0, original QuantTrio synthetic prompts
+
+Complete source links, selection details, and license links are included in
+THIRD_PARTY_DATASETS.md in the source distribution and repository.

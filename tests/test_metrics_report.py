@@ -1,0 +1,99 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from llmbench.metrics import summarize
+from llmbench.report import compare_summaries, write_comparison, write_run_artifacts
+from llmbench.schemas import RequestResult
+
+
+def result(
+    question_id: str,
+    score: float,
+    *,
+    dataset: str = "mmlu-pro",
+    category: str = "Comprehensive",
+    question_type: str = "multiple_choice",
+    metric: str = "accuracy",
+    sample_id: int = 1,
+) -> RequestResult:
+    return RequestResult(
+        run_id="run-1",
+        model="model-a",
+        dataset=dataset,
+        benchmark_category=category,
+        question_type=question_type,
+        metric=metric,
+        question_id=question_id,
+        sample_id=sample_id,
+        concurrency=2,
+        prompt="prompt",
+        raw_output="A",
+        parsed_answer="A",
+        gold_answer="A" if score else "B",
+        score=score,
+        parse_failed=False,
+        latency_ms=100 + sample_id,
+        ttft_ms=20,
+        tpot_ms=5,
+        input_tokens=10,
+        output_tokens=5,
+        finish_reason="stop",
+        error=None,
+        error_type=None,
+        http_status=None,
+        attempts=1,
+    )
+
+
+def make_summary(rows: list[RequestResult], run_id: str = "run-1") -> dict:
+    return summarize(
+        rows,
+        run_id=run_id,
+        mode="run",
+        model="model-a",
+        base_url="http://localhost/v1",
+        elapsed_seconds=1.0,
+        config={"datasets": sorted({row.dataset for row in rows}), "concurrency": 2},
+    )
+
+
+def test_category_type_and_dataset_breakdowns(tmp_path) -> None:
+    rows = [
+        result("q1", 1),
+        result("q2", 0),
+        result(
+            "d1",
+            0.8,
+            dataset="drop",
+            category="Reading Comprehension",
+            question_type="f1",
+            metric="token_f1",
+        ),
+    ]
+    summary = make_summary(rows)
+    assert summary["quality"]["mean_score"] == pytest.approx(0.6)
+    assert summary["quality"]["by_dataset"]["drop"]["metric"] == "token_f1"
+    assert summary["quality"]["by_category"]["Comprehensive"]["macro_mean_score"] == 0.5
+    assert summary["quality"]["by_question_type"]["f1"]["mean_score"] == 0.8
+    paths = write_run_artifacts(tmp_path / "run", summary, rows)
+    assert all(path.exists() for path in paths.values())
+    assert "Category breakdown" in paths["markdown"].read_text(encoding="utf-8")
+    assert len(paths["raw"].read_text(encoding="utf-8").splitlines()) == 3
+
+
+def test_comparison_artifacts(tmp_path) -> None:
+    baseline = make_summary([result("q1", 1), result("q2", 1)], "baseline")
+    candidate = make_summary([result("q1", 1), result("q2", 0)], "candidate")
+    baseline["config"]["memory_gb"] = 80.0
+    candidate["config"]["memory_gb"] = 24.0
+    comparison = compare_summaries(baseline, candidate)
+    assert comparison["quality"]["absolute_change"] == -0.5
+    assert comparison["performance"]["memory_reduction"] == pytest.approx(0.7)
+    paths = write_comparison(tmp_path / "compare.html", comparison)
+    assert all(path.exists() for path in paths.values())
+    payload = json.loads(paths["json"].read_text(encoding="utf-8"))
+    assert payload["candidate"]["run_id"] == "candidate"
+    assert "Memory reduction: 70.00%" in paths["markdown"].read_text(encoding="utf-8")
