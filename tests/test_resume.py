@@ -100,3 +100,22 @@ async def test_stress_request_rate_and_ramp() -> None:
         ramp_seconds=0.001,
     )
     assert len(results) == 4
+
+
+@pytest.mark.asyncio
+async def test_missing_capability_is_unsupported_not_scored() -> None:
+    item = DatasetItem(
+        id="code-1",
+        dataset="humaneval",
+        type="code",
+        question="def answer():",
+        answer="return 42",
+        metadata={
+            "capability": "agent",
+            "benchmark_category": "代码能力",
+            "benchmark_metric": "pass_at_1",
+        },
+    )
+    results, _ = await make_runner().evaluate([item])
+    assert results[0].error_type == "unsupported_capability"
+    assert results[0].score is None

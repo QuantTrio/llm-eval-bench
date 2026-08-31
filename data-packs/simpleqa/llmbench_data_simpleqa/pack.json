@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-simpleqa",
+  "version": "0.5.0",
+  "package": "llmbench_data_simpleqa",
+  "source_revision": "652c89d0ca9df547706735883097e9537d40dc47",
+  "datasets": {
+    "simpleqa": {
+      "file": "simpleqa.jsonl",
+      "count": 500,
+      "type": "judge",
+      "category": "常识问答",
+      "metric": "judge_accuracy",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://openaipublic.blob.core.windows.net/simple-evals/simple_qa_test_set.csv",
+      "sha256": "7ec9c9c5c996b248b2e27a4e48e4951dcaf6639070a7580bd0730aa57dd0ec65",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true
+    }
+  }
+}

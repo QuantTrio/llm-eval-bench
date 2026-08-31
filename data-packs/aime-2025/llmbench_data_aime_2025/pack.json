@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-aime-2025",
+  "version": "0.5.0",
+  "package": "llmbench_data_aime_2025",
+  "source_revision": "a7b26602f8321cf71132eeb57c7f4d163e9b5a50",
+  "datasets": {
+    "aime-2025": {
+      "file": "aime-2025.jsonl",
+      "count": 30,
+      "type": "math",
+      "category": "数学推理",
+      "metric": "exact_match",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://huggingface.co/datasets/test-time-compute/aime_2025/resolve/a7b26602f8321cf71132eeb57c7f4d163e9b5a50/data/test-00000-of-00001.parquet",
+      "sha256": "6838a17a02f88e2e87ecce67df3c941e9376659cdf30b635c87df8ecc9524ec7",
+      "recommended_max_tokens": 8192,
+      "official_full_set": true
+    }
+  }
+}

@@ -100,6 +100,7 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
             "",
             f"- Total requests: {performance['total_requests']}",
             f"- Successful requests: {performance['successful_requests']}",
+            f"- Unsupported requests: {performance.get('unsupported_requests', 0)}",
             f"- Failed requests: {performance['failed_requests']}",
             f"- QPS: {_fmt(performance['qps'])}",
             f"- Output tokens/s: {_fmt(performance['output_tokens_per_second'])}",

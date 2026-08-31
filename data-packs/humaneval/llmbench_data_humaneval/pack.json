@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-humaneval",
+  "version": "0.5.0",
+  "package": "llmbench_data_humaneval",
+  "source_revision": "6d43fb980f9fee3c892a914eda09951f772ad10d",
+  "datasets": {
+    "humaneval": {
+      "file": "humaneval.jsonl",
+      "count": 100,
+      "type": "code",
+      "category": "代码能力",
+      "metric": "pass_at_1",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/data/HumanEval.jsonl.gz",
+      "sha256": "04994a0f4d1b270cebfc8038ca0d3c94a170a2d3e4e53e9ba7f6c560768c1fb9",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true
+    }
+  }
+}

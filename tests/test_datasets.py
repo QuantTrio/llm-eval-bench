@@ -10,7 +10,8 @@ from llmbench.catalog import benchmark_catalog, list_benchmarks
 from llmbench.datasets import list_datasets, load_dataset, load_many, stress_prompts
 
 
-def test_bundled_dataset_manifest_and_checksums() -> None:
+def test_bundled_dataset_manifest_and_checksums(monkeypatch) -> None:
+    monkeypatch.setattr("llmbench.data_packs._entry_points", lambda: [])
     catalog = {item["name"]: item for item in list_datasets()}
     assert set(catalog) == {
         "ceval",

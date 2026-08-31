@@ -162,6 +162,10 @@ class BenchmarkRunner:
         return results, time.perf_counter() - started
 
     async def _one(self, item: DatasetItem, sample_id: int) -> RequestResult:
+        capability = str(item.metadata.get("capability") or "chat")
+        adapter = str(item.metadata.get("adapter") or "native")
+        if capability != "chat" or adapter != "native":
+            return self._unsupported(item, sample_id, f"{capability}/{adapter}")
         messages = build_messages(item)
         recommended = int(item.metadata.get("recommended_max_tokens") or 4096)
         max_tokens = self.max_tokens if self.max_tokens is not None else max(4096, recommended)
@@ -207,4 +211,37 @@ class BenchmarkRunner:
             attempts=completion.attempts,
             max_tokens=max_tokens,
             attempt_latency_ms=completion.attempt_latency_ms,
+        )
+
+    def _unsupported(self, item: DatasetItem, sample_id: int, capability: str) -> RequestResult:
+        recommended = int(item.metadata.get("recommended_max_tokens") or 4096)
+        max_tokens = self.max_tokens if self.max_tokens is not None else max(4096, recommended)
+        return RequestResult(
+            run_id=self.run_id,
+            model=self.model,
+            dataset=item.dataset,
+            benchmark_category=str(item.metadata.get("benchmark_category") or "Custom"),
+            question_type=item.type,
+            metric=str(item.metadata.get("benchmark_metric") or "none"),
+            question_id=item.id,
+            sample_id=sample_id,
+            concurrency=self.concurrency,
+            prompt=build_prompt(item),
+            raw_output="",
+            parsed_answer=None,
+            gold_answer=item.answer,
+            score=None,
+            parse_failed=False,
+            latency_ms=0,
+            ttft_ms=None,
+            tpot_ms=None,
+            input_tokens=0,
+            output_tokens=0,
+            finish_reason=None,
+            error=f"target does not provide required capability: {capability}",
+            error_type="unsupported_capability",
+            http_status=None,
+            attempts=0,
+            max_tokens=max_tokens,
+            attempt_latency_ms=None,
         )

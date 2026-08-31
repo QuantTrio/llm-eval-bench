@@ -43,7 +43,9 @@ def summarize(
     config: dict[str, Any],
 ) -> dict[str, Any]:
     total = len(results)
-    successful = [result for result in results if result.error is None]
+    unsupported = [result for result in results if result.error_type == "unsupported_capability"]
+    supported = [result for result in results if result.error_type != "unsupported_capability"]
+    successful = [result for result in supported if result.error is None]
     scored = [result for result in results if result.score is not None]
     latency = [result.latency_ms for result in successful]
     ttft = [result.ttft_ms for result in successful if result.ttft_ms is not None]
@@ -51,7 +53,7 @@ def summarize(
     attempt_latency = [
         result.attempt_latency_ms for result in successful if result.attempt_latency_ms is not None
     ]
-    errors = Counter(result.error_type or "unknown" for result in results if result.error)
+    errors = Counter(result.error_type or "unknown" for result in supported if result.error)
 
     quality: dict[str, Any] = {
         "scored_samples": len(scored),
@@ -156,10 +158,12 @@ def summarize(
 
     performance = {
         "total_requests": total,
+        "supported_requests": len(supported),
+        "unsupported_requests": len(unsupported),
         "successful_requests": len(successful),
-        "failed_requests": total - len(successful),
+        "failed_requests": len(supported) - len(successful),
         "elapsed_seconds": elapsed_seconds,
-        "qps": total / elapsed_seconds if elapsed_seconds > 0 else 0.0,
+        "qps": len(supported) / elapsed_seconds if elapsed_seconds > 0 else 0.0,
         "successful_qps": len(successful) / elapsed_seconds if elapsed_seconds > 0 else 0.0,
         "input_tokens_per_second": (
             sum(row.input_tokens for row in successful) / elapsed_seconds
@@ -171,8 +175,8 @@ def summarize(
             if elapsed_seconds > 0
             else 0.0
         ),
-        "error_rate": (total - len(successful)) / total if total else 0.0,
-        "timeout_rate": errors.get("timeout", 0) / total if total else 0.0,
+        "error_rate": ((len(supported) - len(successful)) / len(supported) if supported else 0.0),
+        "timeout_rate": errors.get("timeout", 0) / len(supported) if supported else 0.0,
         "truncated_responses": sum(row.finish_reason == "length" for row in successful),
         "truncation_rate": (
             sum(row.finish_reason == "length" for row in successful) / len(successful)

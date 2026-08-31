@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-ifbench",
+  "version": "0.5.0",
+  "package": "llmbench_data_ifbench",
+  "source_revision": "2e8a48de45ff3bf41242f927254ca81b59ca3ae2",
+  "datasets": {
+    "ifbench": {
+      "file": "ifbench.jsonl",
+      "count": 200,
+      "type": "instruction",
+      "category": "指令跟随",
+      "metric": "prompt_loose_accuracy",
+      "license": "ODC-By-1.0",
+      "restriction": "Ai2 Responsible Use and third-party output terms",
+      "source": "https://huggingface.co/datasets/allenai/IFBench_test/resolve/2e8a48de45ff3bf41242f927254ca81b59ca3ae2/data/train-00000-of-00001.parquet",
+      "sha256": "95d093e100d3cbcffa5fc7f34f4ed5ba28242059b97f2328328fef8e6f98b553",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true
+    }
+  }
+}

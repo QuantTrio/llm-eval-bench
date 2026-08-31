@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import sys
 import time
@@ -13,16 +14,20 @@ import typer
 
 from . import __version__
 from .artifacts import RunArtifactWriter, utc_now
+from .capabilities import capability_matrix
 from .catalog import list_benchmarks, report_count_for_dataset
 from .client import OpenAICompatibleClient
 from .comparison import IncomparableRunsError, compare_run_directories, evaluate_policy
 from .config import load_bench_config, load_yaml, secret_from_env
+from .data_packs import discover_data_packs, verify_installed_data_packs
 from .datasets import list_datasets as dataset_catalog
 from .datasets import load_many, stress_prompts
+from .executor_client import RemoteExecutorClient
 from .metrics import summarize
 from .report import write_comparison, write_run_artifacts, write_sweep_artifacts
 from .repro import build_run_manifest, canonical_hash
 from .runner import BenchmarkRunner
+from .suite import CapabilityRunner
 from .telemetry import PrometheusCollector, metric_delta
 
 app = typer.Typer(
@@ -32,6 +37,8 @@ app = typer.Typer(
 )
 executor_app = typer.Typer(help="Serve and manage the remote isolated task executor.")
 app.add_typer(executor_app, name="executor")
+data_app = typer.Typer(help="Inspect and verify optional benchmark data wheels.")
+app.add_typer(data_app, name="data")
 
 BaseUrl = Annotated[
     str | None,
@@ -424,6 +431,39 @@ def list_datasets_command() -> None:
         )
 
 
+@data_app.command("list")
+def data_list_command() -> None:
+    """List installed optional data wheels."""
+    packs = discover_data_packs()
+    if not packs:
+        typer.echo("No optional data packs installed.")
+        return
+    for pack in packs:
+        typer.echo(
+            f"{pack['name']} {pack['version']} datasets={len(pack['datasets'])} "
+            f"package={pack['package']}"
+        )
+
+
+@data_app.command("verify")
+def data_verify_command() -> None:
+    """Verify installed data-wheel hashes and record counts."""
+    rows = verify_installed_data_packs()
+    if not rows:
+        typer.echo("No optional data packs installed.")
+        return
+    failed = False
+    for row in rows:
+        valid = row["sha256_valid"] and row["count_valid"]
+        failed = failed or not valid
+        typer.echo(
+            f"{row['dataset']:<30} pack={row['pack']}@{row['version']} "
+            f"count={row['count']} status={'ok' if valid else 'FAILED'}"
+        )
+    if failed:
+        raise typer.Exit(code=4)
+
+
 @app.command("list-benchmarks")
 def list_benchmarks_command(
     category: Annotated[str | None, typer.Option("--category")] = None,
@@ -439,6 +479,20 @@ def list_benchmarks_command(
         typer.echo(
             f"{item['code']:<34} reports={item['report_count']:<4} {item['category']:<18} {status}"
         )
+
+
+@app.command("coverage")
+def coverage_command() -> None:
+    """Show the 23-category representative benchmark capability matrix."""
+    installed = {item["name"] for item in dataset_catalog()}
+    rows = capability_matrix(installed)
+    for row in rows:
+        state = "installed" if row["installed"] else f"requires:{row['data_pack']}"
+        typer.echo(
+            f"{row['category']:<24} {row['benchmark']:<28} "
+            f"capability={row['capability']:<12} {state}"
+        )
+    typer.echo(f"Coverage: {sum(row['installed'] for row in rows)}/{len(rows)} categories")
 
 
 @app.command("list-models")
@@ -742,6 +796,231 @@ def run_command(
         },
     )
     _evaluation_command("run", **values)
+
+
+@app.command("suite")
+def suite_command(
+    config: Annotated[Path, typer.Option("--config", exists=True, readable=True)],
+    dataset: Annotated[str | None, typer.Option("--dataset")] = None,
+    limit: Annotated[int | None, typer.Option("--limit", min=1)] = None,
+    output_dir: Annotated[Path | None, typer.Option("--output-dir")] = None,
+) -> None:
+    """Run installed representative benchmarks through capability-specific targets."""
+    try:
+        configuration = load_bench_config(config)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    targets = configuration.get("targets") or {}
+    run_config = configuration.get("run") or {}
+    chat = targets.get("chat") or {}
+    if not chat.get("base_url"):
+        raise typer.BadParameter("suite requires targets.chat.base_url")
+    available = {item["name"] for item in dataset_catalog()}
+    if dataset is None:
+        selected_datasets = [
+            row["dataset_id"] for row in capability_matrix(available) if row["installed"]
+        ]
+    else:
+        selected_datasets = _dataset_names(dataset)
+    if not selected_datasets:
+        raise typer.BadParameter("suite has no installed representative datasets")
+    selected_limit = limit or int(run_config.get("limit_per_dataset") or 100)
+    items = load_many(
+        selected_datasets,
+        limit_per_dataset=selected_limit,
+        sample=None,
+        seed=int(run_config.get("seed", 42)),
+    )
+    directory = output_dir or Path(run_config.get("output_dir") or _default_output("suite"))
+
+    async def run() -> None:
+        async with contextlib.AsyncExitStack() as stack:
+
+            async def target_client(name: str):
+                values = targets.get(name) or {}
+                if not values.get("base_url"):
+                    return None, None
+                key = secret_from_env(values.get("api_key_env")) or "EMPTY"
+                client = await stack.enter_async_context(
+                    OpenAICompatibleClient(
+                        base_url=str(values["base_url"]),
+                        api_key=key,
+                        timeout=float(values.get("timeout", run_config.get("timeout", 300))),
+                        retries=int(values.get("retries", run_config.get("retries", 2))),
+                    )
+                )
+                model = values.get("model")
+                if model is None:
+                    model, _ = await client.resolve_model(None)
+                return client, str(model)
+
+            chat_client, chat_model = await target_client("chat")
+            if chat_client is None or chat_model is None:
+                raise typer.BadParameter("suite requires a usable chat target")
+            multimodal_client, multimodal_model = await target_client("multimodal")
+            embedding_client, embedding_model = await target_client("embedding")
+            judge_client, judge_model = await target_client("judge")
+            judge_config = configuration.get("judge") or {}
+            if judge_client is None and judge_config.get("base_url"):
+                judge_key = secret_from_env(judge_config.get("api_key_env")) or "EMPTY"
+                judge_client = await stack.enter_async_context(
+                    OpenAICompatibleClient(
+                        base_url=str(judge_config["base_url"]),
+                        api_key=judge_key,
+                        timeout=float(judge_config.get("timeout", 300)),
+                        retries=int(judge_config.get("retries", 2)),
+                    )
+                )
+                judge_model = str(judge_config["model"])
+            agent = targets.get("agent") or {}
+            executor_client = None
+            executor_key = None
+            if agent.get("executor_url"):
+                executor_client = await stack.enter_async_context(
+                    RemoteExecutorClient(
+                        str(agent["executor_url"]),
+                        timeout=float(agent.get("timeout", 600)),
+                    )
+                )
+                executor_key = secret_from_env(agent.get("ephemeral_key_env"))
+
+            runner = CapabilityRunner(
+                chat_client=chat_client,
+                chat_model=chat_model,
+                multimodal_client=multimodal_client,
+                multimodal_model=multimodal_model,
+                embedding_client=embedding_client,
+                embedding_model=embedding_model,
+                judge_client=judge_client,
+                judge_model=judge_model,
+                judge_repeats=int(judge_config.get("repeats", 3)),
+                executor_client=executor_client,
+                executor_key=executor_key,
+                executor_image=agent.get("image"),
+                concurrency=int(run_config.get("concurrency", 16)),
+                temperature=float(run_config.get("temperature", 0)),
+                top_p=float(run_config.get("top_p", 1)),
+                max_tokens=run_config.get("max_tokens"),
+                stream=bool(run_config.get("stream", True)),
+                seed=int(run_config.get("seed", 42)),
+                request_extra_body=dict(run_config.get("request_extra_body") or {}),
+            )
+            writer = RunArtifactWriter(
+                directory,
+                checkpoint_every=int(run_config.get("checkpoint_every", 1)),
+            )
+            manifest = build_run_manifest(
+                run_id=runner.run_id,
+                mode="suite",
+                model=chat_model,
+                base_url=str(chat["base_url"]),
+                config={
+                    "datasets": selected_datasets,
+                    "limit_per_dataset": selected_limit,
+                    "sample": None,
+                    "concurrency": runner.concurrency,
+                    "temperature": runner.temperature,
+                    "top_p": runner.top_p,
+                    "max_tokens": runner.max_tokens,
+                    "timeout": run_config.get("timeout", 300),
+                    "retries": run_config.get("retries", 2),
+                    "retry_backoff": run_config.get("retry_backoff", 2),
+                    "n_samples": 1,
+                    "seed": runner.seed,
+                    "stream": runner.stream,
+                    "request_extra_body": run_config.get("request_extra_body") or {},
+                    "target_capabilities": sorted(targets),
+                },
+                items=items,
+                n_samples=1,
+            )
+            manifest["target_capabilities"] = sorted(targets)
+            writer.write_manifest(manifest)
+            writer.event(
+                "run_started",
+                run_id=runner.run_id,
+                completed=0,
+                total=len(items),
+            )
+            started = time.perf_counter()
+
+            def persist(result, completed: int, total: int) -> None:
+                writer.append_result(
+                    result,
+                    completed=completed,
+                    total=total,
+                    elapsed_seconds=time.perf_counter() - started,
+                )
+                if completed == total or completed % 10 == 0:
+                    typer.echo(
+                        json.dumps(
+                            {
+                                "event": "suite_progress",
+                                "completed": completed,
+                                "total": total,
+                                "unsupported": result.error_type == "unsupported_capability",
+                            }
+                        ),
+                        err=True,
+                    )
+
+            results, elapsed = await runner.evaluate(items, on_result=persist)
+            summary_config = {
+                "datasets": selected_datasets,
+                "limit_per_dataset": selected_limit,
+                "concurrency": runner.concurrency,
+                "temperature": runner.temperature,
+                "top_p": runner.top_p,
+                "max_tokens": runner.max_tokens,
+                "n_samples": 1,
+                "seed": runner.seed,
+                "stream": runner.stream,
+                "target_capabilities": sorted(targets),
+                "judge_repeats": runner.judge_repeats,
+            }
+            summary = summarize(
+                results,
+                run_id=runner.run_id,
+                mode="suite",
+                model=chat_model,
+                base_url=str(chat["base_url"]),
+                elapsed_seconds=elapsed,
+                config=summary_config,
+            )
+            requested_categories = sorted({result.benchmark_category for result in results})
+            supported_categories = sorted(
+                {
+                    result.benchmark_category
+                    for result in results
+                    if result.error_type != "unsupported_capability"
+                }
+            )
+            summary["coverage"] = {
+                "requested_categories": requested_categories,
+                "supported_categories": supported_categories,
+                "unsupported_categories": sorted(
+                    set(requested_categories) - set(supported_categories)
+                ),
+                "ratio": (
+                    len(supported_categories) / len(requested_categories)
+                    if requested_categories
+                    else 0
+                ),
+            }
+            paths = write_run_artifacts(directory, summary, results)
+            writer.write_state(
+                {
+                    "status": "completed",
+                    "completed": len(results),
+                    "total": len(results),
+                    "elapsed_seconds": elapsed,
+                    "updated_at": utc_now(),
+                }
+            )
+            writer.event("run_completed", run_id=runner.run_id, completed=len(results))
+            _print_run_summary(summary, paths)
+
+    asyncio.run(run())
 
 
 @app.command("stress")

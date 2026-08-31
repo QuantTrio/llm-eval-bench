@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-simple-bench",
+  "version": "0.5.0",
+  "package": "llmbench_data_simple_bench",
+  "source_revision": "fbc2e429085bdedad7d1a236d2bc9bc18c95f16e",
+  "datasets": {
+    "simple-bench": {
+      "file": "simple-bench.jsonl",
+      "count": 10,
+      "type": "multiple_choice",
+      "category": "常识推理",
+      "metric": "accuracy",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://api.github.com/repos/simple-bench/SimpleBench/contents/simple_bench_public.json?ref=fbc2e429085bdedad7d1a236d2bc9bc18c95f16e",
+      "sha256": "ec1effd0f88529c7ce48866fbe30e61fb2e99e5eac269bb1e47346ccb6f74faa",
+      "recommended_max_tokens": 4096,
+      "official_public_full_set": true
+    }
+  }
+}

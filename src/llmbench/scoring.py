@@ -37,7 +37,7 @@ def build_prompt(item: DatasetItem) -> str:
     return item.question
 
 
-def build_messages(item: DatasetItem) -> list[dict[str, str]]:
+def build_messages(item: DatasetItem) -> list[dict[str, object]]:
     if item.messages:
         return item.messages
     return [{"role": "user", "content": build_prompt(item)}]

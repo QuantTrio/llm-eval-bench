@@ -13,7 +13,7 @@ class DatasetItem:
     answer: str | None = None
     choices: dict[str, str] = field(default_factory=dict)
     subset: str | None = None
-    messages: list[dict[str, str]] | None = None
+    messages: list[dict[str, Any]] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -52,6 +52,15 @@ class CompletionResult:
     http_status: int | None = None
     attempts: int = 1
     attempt_latency_ms: float | None = None
+
+
+@dataclass(slots=True)
+class EmbeddingResult:
+    vectors: list[list[float]] = field(default_factory=list)
+    latency_ms: float = 0.0
+    input_tokens: int = 0
+    error: str | None = None
+    error_type: str | None = None
 
 
 @dataclass(slots=True)

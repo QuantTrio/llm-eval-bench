@@ -7,6 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
+from .data_packs import external_dataset_resources
 from .schemas import DatasetItem
 
 
@@ -16,7 +17,16 @@ def _manifest() -> dict[str, dict[str, Any]]:
 
 
 def list_datasets() -> list[dict[str, Any]]:
-    return [dict(name=name, **metadata) for name, metadata in sorted(_manifest().items())]
+    datasets = {name: dict(metadata) for name, metadata in _manifest().items()}
+    for name, resource in external_dataset_resources().items():
+        if name in datasets:
+            raise ValueError(f"Installed data pack conflicts with built-in dataset {name!r}")
+        datasets[name] = {
+            **resource.metadata,
+            "pack": resource.pack,
+            "pack_version": resource.pack_version,
+        }
+    return [dict(name=name, **metadata) for name, metadata in sorted(datasets.items())]
 
 
 def dataset_metadata(name_or_path: str) -> dict[str, Any]:
@@ -32,6 +42,9 @@ def dataset_metadata(name_or_path: str) -> dict[str, Any]:
             "recommended_max_tokens": 4096,
         }
     metadata = _manifest().get(name_or_path)
+    if metadata is None:
+        external = external_dataset_resources().get(name_or_path)
+        metadata = external.metadata if external else None
     if metadata is None:
         raise ValueError(f"Unknown dataset '{name_or_path}'")
     return dict(metadata)
@@ -70,16 +83,24 @@ def load_dataset(
             item.metadata.setdefault("recommended_max_tokens", 4096)
     else:
         manifest = _manifest()
-        if name_or_path not in manifest:
-            available = ", ".join(sorted(manifest))
+        external = external_dataset_resources()
+        if name_or_path not in manifest and name_or_path not in external:
+            available = ", ".join(sorted(set(manifest) | set(external)))
             raise ValueError(
                 f"Unknown dataset '{name_or_path}'. Built-ins: {available}; "
                 "or pass a local JSONL path."
             )
-        metadata = manifest[name_or_path]
-        resource = files("llmbench").joinpath("data", metadata["file"])
+        if name_or_path in manifest:
+            metadata = manifest[name_or_path]
+            resource = files("llmbench").joinpath("data", metadata["file"])
+        else:
+            external_resource = external[name_or_path]
+            metadata = external_resource.metadata
+            resource = files(external_resource.package).joinpath(external_resource.file)
         items = _read_jsonl(resource, source=name_or_path)
         for item in items:
+            if name_or_path in external:
+                item.metadata.setdefault("resource_package", external[name_or_path].package)
             item.metadata.setdefault("benchmark_category", metadata["category"])
             item.metadata.setdefault("benchmark_metric", metadata["metric"])
             item.metadata.setdefault(

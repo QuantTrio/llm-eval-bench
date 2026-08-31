@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quanttrio-llmbench-data-simple-bench"
+version = "0.5.0"
+description = "Official public SimpleBench data pack for QuantTrio llmbench"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "QuantTrio" }]
+
+[project.entry-points."llmbench.data_packs"]
+simple-bench = "llmbench_data_simple_bench:manifest"
+
+[tool.setuptools.package-data]
+llmbench_data_simple_bench = ["*.json", "*.jsonl", "LICENSE-SIMPLEBENCH"]

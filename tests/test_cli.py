@@ -242,3 +242,62 @@ def test_cli_concurrency_sweep(mock_server: str, tmp_path) -> None:
         point["summary"]["performance"]["total_requests"] == 2 for point in payload["points"]
     )
     assert (output / "sweep.html").exists()
+
+
+def test_cli_capability_suite_native_chat(mock_server: str, tmp_path, monkeypatch) -> None:
+    dataset = tmp_path / "suite.jsonl"
+    dataset.write_text(
+        json.dumps(
+            {
+                "id": "q1",
+                "dataset": "suite-custom",
+                "type": "exact_match",
+                "question": "Capital of France?",
+                "answer": "Paris",
+                "metadata": {
+                    "benchmark_category": "Test",
+                    "benchmark_metric": "exact_match",
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "suite-run"
+    config = tmp_path / "suite.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "schema_version: 2",
+                "targets:",
+                "  chat:",
+                f"    base_url: {mock_server}",
+                "    model: mock-model",
+                "    api_key_env: SUITE_CHAT_KEY",
+                "run:",
+                "  concurrency: 1",
+                "  stream: false",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SUITE_CHAT_KEY", "EMPTY")
+    result = CliRunner().invoke(
+        app,
+        [
+            "suite",
+            "--config",
+            str(config),
+            "--dataset",
+            str(dataset),
+            "--limit",
+            "1",
+            "--output-dir",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 0, result.exception
+    summary = json.loads((output / "summary.json").read_text())
+    assert summary["coverage"]["ratio"] == 1
+    assert summary["quality"]["by_dataset"]["suite-custom"]["score"] == 1

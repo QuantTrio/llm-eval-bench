@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-agieval",
+  "version": "0.5.0",
+  "package": "llmbench_data_agieval",
+  "source_revision": "84ab72d94318290aad2e4ec820d535a95a1f7552",
+  "datasets": {
+    "agieval": {
+      "file": "agieval.jsonl",
+      "count": 200,
+      "type": "multiple_choice",
+      "category": "综合能力",
+      "metric": "accuracy",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://github.com/ruixiangcui/AGIEval/tree/84ab72d94318290aad2e4ec820d535a95a1f7552/data/v1_1",
+      "sha256": "8540c39056bd2f6941c131ce6334dd6af4e2bfc17a9f3fde73cf5a2480f1464f",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true
+    }
+  }
+}

@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from .schemas import CompletionResult
+from .schemas import CompletionResult, EmbeddingResult
 
 
 class OpenAICompatibleClient:
@@ -67,7 +67,7 @@ class OpenAICompatibleClient:
         self,
         *,
         model: str,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         temperature: float,
         top_p: float,
         max_tokens: int,
@@ -122,6 +122,39 @@ class OpenAICompatibleClient:
         result.attempt_latency_ms = result.latency_ms
         result.latency_ms = (time.perf_counter() - overall_started) * 1000
         return result
+
+    async def embed(self, *, model: str, inputs: list[str]) -> EmbeddingResult:
+        started = time.perf_counter()
+        try:
+            response = await self._client.post(
+                f"{self.base_url}/embeddings",
+                json={"model": model, "input": inputs},
+            )
+            response.raise_for_status()
+            payload = response.json()
+            ordered = sorted(payload.get("data") or [], key=lambda item: item.get("index", 0))
+            vectors = [[float(value) for value in item["embedding"]] for item in ordered]
+            if len(vectors) != len(inputs):
+                raise ValueError(
+                    f"embedding endpoint returned {len(vectors)} vectors for {len(inputs)} inputs"
+                )
+            return EmbeddingResult(
+                vectors=vectors,
+                latency_ms=(time.perf_counter() - started) * 1000,
+                input_tokens=int((payload.get("usage") or {}).get("prompt_tokens") or 0),
+            )
+        except httpx.TimeoutException as exc:
+            return EmbeddingResult(
+                latency_ms=(time.perf_counter() - started) * 1000,
+                error=str(exc),
+                error_type="timeout",
+            )
+        except (httpx.HTTPError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+            return EmbeddingResult(
+                latency_ms=(time.perf_counter() - started) * 1000,
+                error=str(exc),
+                error_type="embedding_error",
+            )
 
     async def _json_completion(self, body: dict[str, Any], started: float) -> CompletionResult:
         response = await self._client.post(f"{self.base_url}/chat/completions", json=body)

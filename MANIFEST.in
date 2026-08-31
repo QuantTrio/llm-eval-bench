@@ -3,6 +3,7 @@ include LICENSE
 include README.md
 include THIRD_PARTY_DATASETS.md
 recursive-include docs *.md
+recursive-include data-packs *
 recursive-include examples *.yaml
 recursive-include executor *
 recursive-include scripts *.py
