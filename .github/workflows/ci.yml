@@ -24,4 +24,9 @@ jobs:
         run: |
           python -m build
           python scripts/verify_package.py dist/*.whl
-
+          python scripts/generate_sbom.py --output dist/sbom.cdx.json dist/*.whl dist/*.tar.gz
+      - if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributions-and-sbom
+          path: dist/

@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-creative-writing-v3",
+  "version": "0.5.0",
+  "package": "llmbench_data_creative_writing_v3",
+  "source_revision": "c7c3ceef54c40a8ae02dc1c2e1a5e40970fe5c0b",
+  "datasets": {
+    "creative-writing-v3": {
+      "file": "creative-writing-v3.jsonl",
+      "count": 32,
+      "type": "judge",
+      "category": "写作和创作",
+      "metric": "judge_score",
+      "license": "LicenseRef-Upstream-Unspecified",
+      "restriction": "local build only",
+      "source": "https://github.com/EQ-bench/creative-writing-bench/tree/c7c3ceef54c40a8ae02dc1c2e1a5e40970fe5c0b/data",
+      "sha256": "2ba97a75bc4d4d7e04b97abff68075304647cf53cd93493787e30d6ddfae4bca",
+      "recommended_max_tokens": 4096,
+      "official_full_set": true
+    }
+  }
+}

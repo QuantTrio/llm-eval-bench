@@ -29,6 +29,7 @@ from .repro import build_run_manifest, canonical_hash
 from .runner import BenchmarkRunner
 from .suite import CapabilityRunner
 from .telemetry import PrometheusCollector, metric_delta
+from .validation import validate_run_directory
 
 app = typer.Typer(
     name="llmbench",
@@ -493,6 +494,19 @@ def coverage_command() -> None:
             f"capability={row['capability']:<12} {state}"
         )
     typer.echo(f"Coverage: {sum(row['installed'] for row in rows)}/{len(rows)} categories")
+
+
+@app.command("validate")
+def validate_command(
+    run_dir: Annotated[Path, typer.Argument(exists=True, file_okay=False, readable=True)],
+) -> None:
+    """Validate a schema-v2 run directory and raw JSONL records."""
+    try:
+        validated = validate_run_directory(run_dir)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        typer.echo(f"Validation failed: {exc}", err=True)
+        raise typer.Exit(code=4) from exc
+    typer.echo("Validated: " + ", ".join(validated))
 
 
 @app.command("list-models")

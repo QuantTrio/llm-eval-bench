@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-terminal-bench-2",
+  "version": "0.5.0",
+  "package": "llmbench_data_terminal_bench_2",
+  "source_revision": "2fd12b88aafdd04a52c298e3940bcb189f9766d6",
+  "datasets": {
+    "terminal-bench-2": {
+      "file": "terminal-bench-2.jsonl",
+      "count": 89,
+      "type": "agent",
+      "category": "AI Agent - 工具使用",
+      "metric": "success_rate",
+      "license": "Apache-2.0",
+      "restriction": "requires version-matched remote executor image",
+      "source": "https://api.github.com/repos/harbor-framework/terminal-bench-2/git/trees/2fd12b88aafdd04a52c298e3940bcb189f9766d6?recursive=1",
+      "sha256": "0799493f3d3ccb79a1b7dfc82ad39c296e48a8d85442f3ff96907e76ba8a0fe3",
+      "recommended_max_tokens": 8192,
+      "official_full_set": true
+    }
+  }
+}

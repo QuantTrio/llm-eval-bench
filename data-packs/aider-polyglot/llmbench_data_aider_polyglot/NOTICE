@@ -1,0 +1,5 @@
+Aider Polyglot task descriptors
+Source: https://github.com/Aider-AI/polyglot-benchmark
+Revision: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+This descriptor wheel does not redistribute exercise source files. The executor image and each
+exercise retain their upstream Exercism and language-track terms.

@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-livecodebench",
+  "version": "0.5.0",
+  "package": "llmbench_data_livecodebench",
+  "source_revision": "0fe84c3912ea0c4d4a78037083943e8f0c4dd505",
+  "datasets": {
+    "livecodebench": {
+      "file": "livecodebench.jsonl",
+      "count": 100,
+      "type": "agent",
+      "category": "编程与软件工程",
+      "metric": "pass_at_1",
+      "license": "LicenseRef-LiveCodeBench-CC",
+      "restriction": "local build only; review upstream terms",
+      "source": "https://huggingface.co/datasets/livecodebench/code_generation_lite/resolve/0fe84c3912ea0c4d4a78037083943e8f0c4dd505/test6.jsonl",
+      "sha256": "12a0b41d7fdcb2a042f945c0eeeb48738a7f68effc1cdda2c7b9e0ab3973d277",
+      "recommended_max_tokens": 8192,
+      "regression_subset": true
+    }
+  }
+}

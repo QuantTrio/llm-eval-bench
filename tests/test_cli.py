@@ -129,6 +129,9 @@ def test_cli_eval_end_to_end(mock_server: str, tmp_path) -> None:
     assert (output / "events.jsonl").exists()
     assert (output / "run_manifest.json").exists()
     assert json.loads((output / "run_state.json").read_text())["status"] == "completed"
+    validated = CliRunner().invoke(app, ["validate", str(output)])
+    assert validated.exit_code == 0, validated.exception
+    assert "summary.json" in validated.stdout
 
     resumed = CliRunner().invoke(
         app,

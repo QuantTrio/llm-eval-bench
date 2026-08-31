@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quanttrio-llmbench-data-aider-polyglot"
+version = "0.5.0"
+description = "Pinned Aider Polyglot task descriptor pack for QuantTrio llmbench"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LicenseRef-Upstream-Mixed"
+authors = [{ name = "QuantTrio" }]
+
+[project.entry-points."llmbench.data_packs"]
+aider-polyglot = "llmbench_data_aider_polyglot:manifest"
+
+[tool.setuptools.package-data]
+llmbench_data_aider_polyglot = ["*.json", "*.jsonl", "NOTICE"]

@@ -15,7 +15,7 @@ class FakeExecutor:
         assert ephemeral_key == "temporary"
         if payload["command"][0] == "-c":
             assert "check(answer)" in payload["command"][1]
-        else:
+        elif "browsecomp" in payload["command"]:
             assert "llmbench_harness.browsecomp" in payload["command"]
         return {"id": "job"}
 
@@ -196,9 +196,21 @@ async def test_capability_runner_routes_all_core_adapters(tmp_path) -> None:
                     "benchmark_metric": "judge_accuracy",
                 },
             ),
+            DatasetItem(
+                id="harness",
+                dataset="terminal-bench-2",
+                type="agent",
+                question="task",
+                metadata={
+                    "capability": "agent",
+                    "adapter": "official_harness",
+                    "executor_command": ["run-task", "task"],
+                    "benchmark_metric": "success_rate",
+                },
+            ),
         ]
         results, _ = await runner.evaluate(items)
-    assert [result.score for result in results] == [1.0, 1.0, None, None, 1.0, 1.0, 1.0]
+    assert [result.score for result in results] == [1.0, 1.0, None, None, 1.0, 1.0, 1.0, 1.0]
     assert results[2].error_type == "multimodal_asset_error"
     assert results[3].error_type == "embedding_item_error"
 

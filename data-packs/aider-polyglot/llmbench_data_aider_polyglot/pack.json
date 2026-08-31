@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-aider-polyglot",
+  "version": "0.5.0",
+  "package": "llmbench_data_aider_polyglot",
+  "source_revision": "7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f",
+  "datasets": {
+    "aider-polyglot": {
+      "file": "aider-polyglot.jsonl",
+      "count": 200,
+      "type": "agent",
+      "category": "Agent能力评测",
+      "metric": "pass_rate_1",
+      "license": "LicenseRef-Upstream-Mixed",
+      "restriction": "requires version-matched remote executor image",
+      "source": "https://api.github.com/repos/Aider-AI/polyglot-benchmark/git/trees/7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f?recursive=1",
+      "sha256": "1f3ca82959b9547684c52f3ddacfd948eb60cd226038888f2e8e1208bd0a97cf",
+      "recommended_max_tokens": 8192,
+      "regression_subset": true
+    }
+  }
+}

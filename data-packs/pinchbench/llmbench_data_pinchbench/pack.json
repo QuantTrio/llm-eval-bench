@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-pinchbench",
+  "version": "0.5.0",
+  "package": "llmbench_data_pinchbench",
+  "source_revision": "97118e1f6bb1e8993458f84ed85927f5e328f174",
+  "datasets": {
+    "pinchbench": {
+      "file": "pinchbench.jsonl",
+      "count": 23,
+      "type": "agent",
+      "category": "OpenClaw智能体能力综合测评",
+      "metric": "success_rate",
+      "license": "MIT",
+      "restriction": "requires remote OpenClaw executor and task-specific accounts",
+      "source": "https://api.github.com/repos/Studio-Intrinsic/clawbench/git/trees/97118e1f6bb1e8993458f84ed85927f5e328f174?recursive=1",
+      "sha256": "88bb07af3b2c32bb54298349c01a95410bc8f556db442498e5d99edc803ca498",
+      "recommended_max_tokens": 8192,
+      "official_full_set": true
+    }
+  }
+}

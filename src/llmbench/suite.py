@@ -61,6 +61,8 @@ class CapabilityRunner(BenchmarkRunner):
             return await self._humaneval(item, sample_id)
         if adapter == "remote_browser":
             return await self._remote_browser(item, sample_id)
+        if adapter in {"official_harness", "artifact_judge"}:
+            return await self._remote_harness(item, sample_id)
         return self._unsupported(item, sample_id, f"{capability}/{adapter}")
 
     async def _multimodal(self, item: DatasetItem, sample_id: int) -> RequestResult:
@@ -288,6 +290,52 @@ class CapabilityRunner(BenchmarkRunner):
             error=error,
             error_type="browser_executor_error" if error else None,
             attempts=1,
+        )
+
+    async def _remote_harness(self, item: DatasetItem, sample_id: int) -> RequestResult:
+        if self.executor_client is None or self.executor_key is None or self.executor_image is None:
+            return self._unsupported(item, sample_id, "agent/official_harness")
+        command = item.metadata.get("executor_command")
+        if not isinstance(command, list) or not command:
+            return self._result(
+                item,
+                sample_id,
+                model=self.model,
+                error="data pack did not provide executor_command",
+                error_type="executor_item_error",
+            )
+        started = time.perf_counter()
+        try:
+            submitted = await self.executor_client.submit(
+                {
+                    "image": str(item.metadata.get("executor_image") or self.executor_image),
+                    "command": [str(value) for value in command],
+                    "network": bool(item.metadata.get("network", False)),
+                },
+                ephemeral_key=self.executor_key,
+            )
+            job = await self.executor_client.wait(submitted["id"])
+            artifact = (
+                await self.executor_client.artifacts(submitted["id"])
+                if job["status"] == "completed"
+                else {}
+            )
+            score = float(artifact["score"]) if "score" in artifact else None
+            error = None if score is not None else str(job.get("error") or "missing score")
+        except (OSError, ValueError, TimeoutError, KeyError) as exc:
+            score = None
+            error = str(exc)
+            artifact = {}
+        return self._result(
+            item,
+            sample_id,
+            model=self.model,
+            raw_output=str(artifact.get("summary") or ""),
+            parsed_answer=None,
+            score=score,
+            latency_ms=(time.perf_counter() - started) * 1000,
+            error=error,
+            error_type="executor_error" if error else None,
         )
 
     def _max_tokens(self, item: DatasetItem) -> int:

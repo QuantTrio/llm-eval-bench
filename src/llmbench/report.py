@@ -124,7 +124,12 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
     return "\n".join(lines)
 
 
-def html_report(summary: dict[str, Any], *, title: str = "Model Benchmark Report") -> str:
+def html_report(
+    summary: dict[str, Any],
+    results: list[RequestResult] | None = None,
+    *,
+    title: str = "Model Benchmark Report",
+) -> str:
     markdown = markdown_report(summary, title=title)
     body = "\n".join(
         f"<p>{html.escape(line)}</p>" if line else "" for line in markdown.splitlines()
@@ -145,6 +150,32 @@ def html_report(summary: dict[str, Any], *, title: str = "Model Benchmark Report
         f"<strong>{html.escape(value)}</strong></div>"
         for label, value in cards
     )
+    dataset_rows = []
+    for dataset, values in quality.get("by_dataset", {}).items():
+        score = values.get("score", values.get("mean_score"))
+        width = max(0.0, min(100.0, float(score or 0) * 100))
+        dataset_rows.append(
+            f"<tr><td>{html.escape(dataset)}</td><td>{html.escape(values['metric'])}</td>"
+            f"<td>{_fmt(score, percent=True)}</td><td><div class='bar' style='width:{width:.2f}%'>"
+            "</div></td>"
+            f"<td>{_fmt(values.get('truncation_rate'), percent=True)}</td>"
+            f"<td>{values.get('quality_valid', True)}</td></tr>"
+        )
+    details = []
+    for result in results or []:
+        status = result.error_type or ("truncated" if result.finish_reason == "length" else "ok")
+        details.append(
+            "<tr>"
+            f"<td>{html.escape(result.dataset)}</td>"
+            f"<td>{html.escape(result.question_id)}</td>"
+            f"<td>{_fmt(result.score, percent=True)}</td>"
+            f"<td>{html.escape(status)}</td>"
+            "<td><details><summary>view</summary>"
+            f"<strong>Prompt</strong><pre>{html.escape(result.prompt)}</pre>"
+            f"<strong>Output</strong><pre>{html.escape(result.raw_output)}</pre>"
+            f"<strong>Parsed</strong><pre>{html.escape(str(result.parsed_answer))}</pre>"
+            "</details></td></tr>"
+        )
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>{html.escape(title)}</title>
@@ -157,8 +188,18 @@ gap:12px;margin:24px 0}}
 .card{{background:var(--panel);border:1px solid #25314d;border-radius:12px;padding:18px}}
 .card span{{display:block;color:var(--muted)}} .card strong{{font-size:25px;color:var(--accent)}}
 pre{{white-space:pre-wrap;background:var(--panel);padding:24px;border-radius:12px;overflow:auto}}
+table{{width:100%;border-collapse:collapse;margin:18px 0}}
+th,td{{padding:8px;border-bottom:1px solid #25314d;text-align:left}}
+.bar{{height:12px;background:var(--accent);border-radius:6px;min-width:2px}}
+details pre{{max-height:260px}}
 a{{color:var(--accent)}}
 </style></head><body><main><h1>{html.escape(title)}</h1><div class="cards">{card_html}</div>
+<h2>Dataset scores</h2><table><thead><tr><th>Dataset</th><th>Metric</th>
+<th>Score</th><th>Bar</th><th>Truncated</th><th>Valid</th></tr></thead>
+<tbody>{"".join(dataset_rows)}</tbody></table>
+<h2>Question details</h2><table><thead><tr><th>Dataset</th><th>Question</th>
+<th>Score</th><th>Status</th><th>Details</th></tr></thead>
+<tbody>{"".join(details)}</tbody></table>
 <pre>{html.escape(markdown)}</pre><details><summary>Accessible paragraph view</summary>
 {body}</details>
 </main></body></html>"""
@@ -183,7 +224,7 @@ def write_run_artifacts(
         for result in results:
             handle.write(json.dumps(result.to_dict(), ensure_ascii=False) + "\n")
     paths["markdown"].write_text(markdown_report(summary), encoding="utf-8")
-    paths["html"].write_text(html_report(summary), encoding="utf-8")
+    paths["html"].write_text(html_report(summary, results), encoding="utf-8")
     return paths
 
 
@@ -358,15 +399,31 @@ def write_comparison(output: Path, comparison: dict[str, Any]) -> dict[str, Path
             ),
         ]
     )
+    paired_rows = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(row['dataset']))}</td>"
+        f"<td>{html.escape(str(row['question_id']))}</td>"
+        f"<td>{html.escape(str(row['transition']))}</td>"
+        f"<td>{_fmt(row.get('baseline_score'), percent=True)}</td>"
+        f"<td>{_fmt(row.get('candidate_score'), percent=True)}</td>"
+        f"<td>{html.escape(str(row.get('baseline_answer')))}</td>"
+        f"<td>{html.escape(str(row.get('candidate_answer')))}</td>"
+        "</tr>"
+        for row in comparison.get("paired_results", [])
+    )
     html_document = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width"><title>Quantization Regression Report</title>
 <style>body{{font:15px/1.55 system-ui,sans-serif;max-width:980px;margin:48px auto;padding:0 24px;
 background:#0b1020;color:#e8ecf5}}.cards{{display:grid;grid-template-columns:repeat(2,1fr);
 gap:12px}}.card,pre{{background:#141b2d;border:1px solid #25314d;border-radius:12px;padding:18px}}
 .card span{{display:block;color:#9aa7bd}}.card strong{{font-size:20px;color:#65d6c4}}
-pre{{white-space:pre-wrap;overflow:auto}}</style></head><body>
+pre{{white-space:pre-wrap;overflow:auto}}table{{width:100%;border-collapse:collapse;margin:20px 0}}
+th,td{{padding:7px;border-bottom:1px solid #25314d;text-align:left}}</style></head><body>
 <h1>Quantization Regression Report</h1>
-<div class="cards">{cards}</div><pre>{html.escape(markdown)}</pre></body></html>"""
+<div class="cards">{cards}</div><h2>Paired question changes</h2>
+<table><thead><tr><th>Dataset</th><th>Question</th><th>Transition</th><th>Baseline</th>
+<th>Candidate</th><th>Baseline answer</th><th>Candidate answer</th></tr></thead>
+<tbody>{paired_rows}</tbody></table><pre>{html.escape(markdown)}</pre></body></html>"""
     html_path.write_text(html_document, encoding="utf-8")
     paths = {"json": json_path, "markdown": md_path, "html": html_path}
     if comparison.get("paired_results") is not None:
