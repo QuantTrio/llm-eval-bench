@@ -7,13 +7,21 @@ raw responses plus JSON, Markdown, and HTML reports.
 
 ## Install
 
-Install the tagged framework wheel:
+Recommended: install the complete framework and all publicly redistributable data assets from one
+wheel:
+
+```bash
+python -m pip install "quanttrio-llmbench-full @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.1/quanttrio_llmbench_full-1.0.1-py3-none-any.whl"
+```
+
+Install the smaller framework-only wheel when optional data is not needed:
 
 ```bash
 python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.1/quanttrio_llmbench-1.0.1-py3-none-any.whl"
 ```
 
-Install the framework and every publicly redistributable data asset with exactly two wheels:
+The framework wheel plus the separate aggregate data wheel remains available as a two-wheel
+alternative:
 
 ```bash
 python -m pip install \
@@ -155,45 +163,38 @@ a separate judge model remain catalogued but are not presented as supported scor
 C-Eval data is CC BY-NC-SA 4.0 and is restricted to non-commercial use. See
 [THIRD_PARTY_DATASETS.md](THIRD_PARTY_DATASETS.md) before distributing or using bundled data.
 
-## Optional data wheels and capability suites
+## Full wheel, optional data wheels, and capability suites
 
-The stable executable matrix covers 21 benchmark categories. The v0.5.0 Release provides one
-aggregate wheel containing all 13 data assets or task descriptors that can be redistributed
-publicly. It is a real data wheel, not a dependency-only metapackage. Together with the three core
-representatives in v1.0.1, the two-wheel installation provides `16/21` category coverage. The
-remaining five packs must be built locally because of upstream licensing or mixed assets.
+The stable executable matrix covers 21 benchmark categories. The recommended v1.0.1 full wheel
+combines the complete framework, core data, and all 13 data assets or task descriptors that can be
+redistributed publicly. It is one real wheel, not a dependency-only metapackage, and provides
+`16/21` category coverage by itself. The remaining five packs must be built locally because of
+upstream licensing or mixed assets.
 
-### Install the two-wheel bundle
+### Install the single full wheel
 
-The following downloads the two official Release assets and installs them in one `pip install`
-invocation. The aggregate data wheel is about 235 MB compressed and contains about 489 MB of data;
-allow at least 1 GB for the virtual environment and extracted datasets. This method requires the
-[GitHub CLI](https://cli.github.com/).
+The full wheel is about 235 MB compressed and contains about 492 MB of framework and data files;
+allow at least 1 GB for the virtual environment and extracted assets. This method requires the
+[GitHub CLI](https://cli.github.com/). Install it into a clean environment so another llmbench
+distribution does not own the same import files.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 
-mkdir -p llmbench-wheels/core llmbench-wheels/data
+mkdir -p llmbench-wheel
 
 gh release download v1.0.1 \
   --repo QuantTrio/llm-eval-bench \
-  --pattern 'quanttrio_llmbench-1.0.1-py3-none-any.whl' \
-  --dir llmbench-wheels/core \
+  --pattern 'quanttrio_llmbench_full-1.0.1-py3-none-any.whl' \
+  --dir llmbench-wheel \
   --clobber
 
-gh release download v0.5.0 \
-  --repo QuantTrio/llm-eval-bench \
-  --pattern 'quanttrio_llmbench_data_all-0.5.0-py3-none-any.whl' \
-  --dir llmbench-wheels/data \
-  --clobber
-
-python -m pip install \
-  llmbench-wheels/core/quanttrio_llmbench-1.0.1-py3-none-any.whl \
-  llmbench-wheels/data/quanttrio_llmbench_data_all-0.5.0-py3-none-any.whl
+python -m pip install llmbench-wheel/quanttrio_llmbench_full-1.0.1-py3-none-any.whl
 
 python -c 'import llmbench; print(llmbench.__version__)'
+python -m pip list --format=freeze | grep '^quanttrio-'
 llmbench data list
 llmbench data verify
 llmbench coverage
@@ -202,17 +203,24 @@ llmbench coverage
 Expected final lines include version `1.0.1`, every installed pack with `status=ok`, and:
 
 ```text
+quanttrio-llmbench-full==1.0.1
 Coverage: 16/21 categories
 ```
+
+The correct compatibility tag is `py3-none-any`, not `abi3`. llmbench is pure Python and contains
+no CPython extension module, so `py3-none-any` is the standards-compliant tag that allows the same
+wheel to run on Python 3.10+ across macOS and Linux. A truthful `abi3` wheel would require a binary
+limited-API extension and separate files for each operating-system platform.
 
 The five local-build-only packs are Creative Writing v3, MMEB-v2 Image, GDPval Gold,
 LiveCodeBench, and SuperGLUE. Their pinned builders are under `data-packs/` in the source archive.
 After reviewing their upstream terms and obtaining any required source access, build and install
 those wheels to reach `21/21`. See [data-packs/README.md](data-packs/README.md).
 
-The 13 original per-benchmark wheels remain available for selective installations. Do not install
-them together with `quanttrio-llmbench-data-all`, because both forms intentionally expose the same
-dataset IDs.
+The separate `quanttrio-llmbench` framework wheel, `quanttrio-llmbench-data-all` aggregate wheel,
+and 13 original per-benchmark wheels remain available for smaller or selective installations. Do
+not install any of them alongside `quanttrio-llmbench-full`, because the distributions
+intentionally provide the same framework files or dataset IDs.
 
 ### Configure and start evaluation
 

@@ -1,0 +1,6 @@
+QuantTrio llmbench full distribution
+
+The llmbench framework code is licensed under Apache-2.0. Bundled benchmark datasets and task
+descriptors retain their independent upstream licenses, source revisions, attribution, and
+restrictions. See llmbench/data/LICENSES.txt, llmbench_data_all/pack.json, and the per-dataset
+notices under llmbench_data_all/licenses/.
