@@ -143,9 +143,7 @@ class CapabilityRunner(BenchmarkRunner):
             error_type=details.get("error_type"),
         )
 
-    async def _multimodal_judged(
-        self, item: DatasetItem, sample_id: int
-    ) -> RequestResult:
+    async def _multimodal_judged(self, item: DatasetItem, sample_id: int) -> RequestResult:
         if (
             self.multimodal_client is None
             or self.multimodal_model is None

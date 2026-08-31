@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-superglue",
+  "version": "0.5.0",
+  "package": "llmbench_data_superglue",
+  "source_revision": "5234c61e804e85e5994b14b002fa9ec34487bcfb",
+  "datasets": {
+    "superglue": {
+      "file": "superglue.jsonl",
+      "count": 500,
+      "type": "multiple_choice",
+      "category": "自然语言理解",
+      "metric": "accuracy",
+      "license": "LicenseRef-SuperGLUE-Mixed",
+      "restriction": "local build only",
+      "source": "https://huggingface.co/datasets/aps/super_glue/resolve/5234c61e804e85e5994b14b002fa9ec34487bcfb",
+      "sha256": "8d45dae0b1bbe962ed6ac6e711aa1b271e1b32b32055d71d7a3256f0c6817a70",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true
+    }
+  }
+}

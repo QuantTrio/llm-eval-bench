@@ -1,0 +1,5 @@
+MMEB-eval CIFAR-100 task definition: Apache-2.0
+Source: https://huggingface.co/datasets/TIGER-Lab/MMEB-eval
+Revision: 2f069730be515ea60778413777816b53e2d2a697
+CIFAR-100 source: https://www.cs.toronto.edu/~kriz/cifar.html
+Review CIFAR-100 terms before building or distributing the generated wheel.

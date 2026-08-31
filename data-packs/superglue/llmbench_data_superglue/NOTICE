@@ -1,0 +1,4 @@
+SuperGLUE validation subsets
+Source: https://huggingface.co/datasets/aps/super_glue
+Revision: 5234c61e804e85e5994b14b002fa9ec34487bcfb
+Each component retains its original upstream terms. Review them before local build or use.
