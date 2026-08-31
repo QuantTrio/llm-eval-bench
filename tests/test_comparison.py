@@ -28,7 +28,7 @@ def row(question_id: str, score: float, *, model: str) -> RequestResult:
         sample_id=1,
         concurrency=1,
         prompt="prompt",
-        raw_output="A",
+        raw_output="A" if score else "wrong raw output",
         parsed_answer="A" if score else "B",
         gold_answer="A",
         score=score,
@@ -136,4 +136,9 @@ def test_cli_policy_failure_is_exit_two(tmp_path) -> None:
     )
     assert result.exit_code == 2, result.exception
     assert (tmp_path / "paired_results.jsonl").exists()
-    assert "Paired question changes" in (tmp_path / "comparison.html").read_text()
+    paired = json.loads((tmp_path / "paired_results.jsonl").read_text().splitlines()[0])
+    assert "baseline_raw_output" in paired
+    comparison_html = (tmp_path / "comparison.html").read_text()
+    assert "Paired question changes" in comparison_html
+    assert "Raw output" in comparison_html
+    assert "wrong raw output" in comparison_html

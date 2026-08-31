@@ -244,7 +244,9 @@ def test_cli_concurrency_sweep(mock_server: str, tmp_path) -> None:
     assert all(
         point["summary"]["performance"]["total_requests"] == 2 for point in payload["points"]
     )
-    assert (output / "sweep.html").exists()
+    sweep_html = (output / "sweep.html").read_text(encoding="utf-8")
+    assert "QPS by concurrency" in sweep_html
+    assert "p95 latency (ms) by concurrency" in sweep_html
 
 
 def test_cli_capability_suite_native_chat(mock_server: str, tmp_path, monkeypatch) -> None:
