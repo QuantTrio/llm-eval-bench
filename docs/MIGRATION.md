@@ -36,6 +36,15 @@ must not be mixed with a schema-v2 run in a paired regression comparison.
 - HTML reports are self-contained and add category, sweep, and paired-output visualizations.
 - Build outputs include an SBOM; verify release files against `SHA256SUMS`.
 
+## v0.6.0 to v1.0.0
+
+- No report or configuration conversion is required; schema version 2 is the stable 1.x contract.
+- Core and executor examples use the `1.0.0` image tag. Keep using integrity-verified v0.5.0 data
+  wheels unless a benchmark-specific update is required.
+- Stable coverage is 21 categories. The two catalog-only entries are intentionally not counted as
+  unsupported or zero-scored categories.
+- Review [STABLE_API.md](STABLE_API.md) before depending on implementation-only Python modules.
+
 ## Re-running old baselines
 
 For a CI-grade comparison, re-run the old model with the current package, the same installed data

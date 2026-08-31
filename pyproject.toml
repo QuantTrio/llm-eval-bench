@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quanttrio-llmbench"
-version = "0.6.0"
+version = "1.0.0"
 description = "Offline-ready quality and concurrency benchmarks for OpenAI-compatible LLM APIs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "QuantTrio" }]
 keywords = ["llm", "benchmark", "evaluation", "quantization", "openai-compatible"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
