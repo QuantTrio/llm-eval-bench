@@ -80,8 +80,8 @@ def test_empty_data_packs_and_category_coverage(monkeypatch) -> None:
     assert checked.exit_code == 0
 
     rows = capability_matrix({"truthfulqa", "gpqa-diamond", "drop"})
-    assert len(rows) == 23 == len(BENCHMARK_CAPABILITIES)
+    assert len(rows) == 21 == len(BENCHMARK_CAPABILITIES)
     assert sum(row["installed"] for row in rows) == 3
     coverage = CliRunner().invoke(app, ["coverage"])
     assert coverage.exit_code == 0
-    assert "Coverage: 3/23 categories" in coverage.stdout
+    assert "Coverage: 3/21 categories" in coverage.stdout

@@ -484,7 +484,7 @@ def list_benchmarks_command(
 
 @app.command("coverage")
 def coverage_command() -> None:
-    """Show the 23-category representative benchmark capability matrix."""
+    """Show the supported representative benchmark capability matrix."""
     installed = {item["name"] for item in dataset_catalog()}
     rows = capability_matrix(installed)
     for row in rows:

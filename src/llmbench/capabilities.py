@@ -113,7 +113,6 @@ BENCHMARK_CAPABILITIES = (
     BenchmarkCapability("真实性评估", "TruthfulQA", "truthfulqa", "chat", "native", 200),
     BenchmarkCapability("科学与综合推理", "GPQA Diamond", "gpqa-diamond", "chat", "native", 100),
     BenchmarkCapability("综合能力", "AGIEval", "agieval", "chat", "native", 200, "agieval"),
-    BenchmarkCapability("综合评估", "HLE", "hle", "multimodal", "judge", 100, "hle", 8192),
     BenchmarkCapability(
         "编程与软件工程",
         "LiveCodeBench",
@@ -125,16 +124,6 @@ BENCHMARK_CAPABILITIES = (
     ),
     BenchmarkCapability(
         "自然语言理解", "SuperGLUE", "superglue", "chat", "native", 500, "superglue"
-    ),
-    BenchmarkCapability(
-        "长上下文",
-        "Fiction.liveBench",
-        "fiction-livebench",
-        "chat",
-        "judge",
-        36,
-        "fiction-livebench",
-        8192,
     ),
     BenchmarkCapability(
         "长上下文能力", "LongBench v2", "longbench-v2", "chat", "judge", 200, "longbench-v2", 8192

@@ -10,7 +10,7 @@ raw responses plus JSON, Markdown, and HTML reports.
 Install the tagged release in one command:
 
 ```bash
-python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.4.0/quanttrio_llmbench-0.4.0-py3-none-any.whl"
+python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.5.0/quanttrio_llmbench-0.5.0-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:
@@ -146,6 +146,30 @@ a separate judge model remain catalogued but are not presented as supported scor
 
 C-Eval data is CC BY-NC-SA 4.0 and is restricted to non-commercial use. See
 [THIRD_PARTY_DATASETS.md](THIRD_PARTY_DATASETS.md) before distributing or using bundled data.
+
+## Optional data wheels and capability suites
+
+The stable executable matrix covers 21 benchmark categories. Install only the data wheels needed
+for a run, then verify them locally:
+
+```bash
+python -m pip install ./quanttrio_llmbench_data_humaneval-0.5.0-py3-none-any.whl
+llmbench data list
+llmbench data verify
+llmbench coverage
+```
+
+Run installed representatives through capability-specific targets:
+
+```bash
+llmbench suite --config examples/bench.yaml --limit 100 --output-dir runs/full-suite
+```
+
+Chat, multimodal, embedding, Judge, and remote-agent targets are configured independently. A
+missing target is reported as `unsupported_capability` and is excluded from scoring rather than
+silently counted as a wrong answer. Large or license-restricted packs are built using their pinned
+recipe under `data-packs/`; runtime remains offline after wheel installation. See
+[docs/SUPPORTED_BENCHMARKS.md](docs/SUPPORTED_BENCHMARKS.md).
 
 ## Reports
 
