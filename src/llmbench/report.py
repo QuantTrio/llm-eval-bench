@@ -371,3 +371,41 @@ pre{{white-space:pre-wrap;overflow:auto}}</style></head><body>
     if comparison.get("paired_results") is not None:
         paths["paired"] = paired_path
     return paths
+
+
+def write_sweep_artifacts(output_dir: Path, payload: dict[str, Any]) -> dict[str, Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    json_path = output_dir / "sweep.json"
+    markdown_path = output_dir / "sweep.md"
+    html_path = output_dir / "sweep.html"
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    lines = [
+        "# Concurrency Sweep",
+        "",
+        f"- Model: `{payload['model']}`",
+        f"- Prompt profile: `{payload['prompt_profile']}`",
+        "",
+        "| Concurrency | Requests | QPS | Output tokens/s | "
+        "TTFT p95 ms | Latency p95 ms | Errors |",
+        "|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for point in payload["points"]:
+        performance = point["summary"]["performance"]
+        lines.append(
+            f"| {point['concurrency']} | {performance['total_requests']} | "
+            f"{performance['qps']:.2f} | {performance['output_tokens_per_second']:.2f} | "
+            f"{_fmt(performance['ttft_ms']['p95'])} | "
+            f"{_fmt(performance['latency_ms']['p95'])} | "
+            f"{performance['failed_requests']} |"
+        )
+    markdown = "\n".join(lines) + "\n"
+    markdown_path.write_text(markdown, encoding="utf-8")
+    html_path.write_text(
+        "<!doctype html><html><head><meta charset='utf-8'><title>Concurrency Sweep</title>"
+        "<style>body{font:15px/1.5 system-ui;max-width:1000px;margin:40px auto;padding:0 20px}"
+        "pre{white-space:pre-wrap}</style></head><body><pre>"
+        + html.escape(markdown)
+        + "</pre></body></html>",
+        encoding="utf-8",
+    )
+    return {"json": json_path, "markdown": markdown_path, "html": html_path}

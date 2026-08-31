@@ -109,3 +109,36 @@ def load_many(
     for offset, spec in enumerate(dataset_specs):
         items.extend(load_dataset(spec, limit=limit_per_dataset, sample=sample, seed=seed + offset))
     return items
+
+
+def stress_prompts(profile: str) -> list[DatasetItem]:
+    if profile == "mixed":
+        return load_dataset("stress")
+    lengths = {"short": 32, "medium": 512, "long": 4096}
+    if profile not in lengths:
+        raise ValueError("prompt profile must be one of: short, medium, long, mixed")
+    words = [
+        "Evaluate",
+        "serving",
+        "performance",
+        "with",
+        "deterministic",
+        "synthetic",
+        "context.",
+    ]
+    target = lengths[profile]
+    content = " ".join(words[index % len(words)] for index in range(target))
+    return [
+        DatasetItem(
+            id=f"stress-{profile}",
+            dataset="stress",
+            type="stress",
+            question=f"{content}\nSummarize the request in one sentence.",
+            metadata={
+                "benchmark_category": "Performance",
+                "benchmark_metric": "none",
+                "prompt_profile": profile,
+                "recommended_max_tokens": 128,
+            },
+        )
+    ]

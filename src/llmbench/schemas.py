@@ -51,6 +51,7 @@ class CompletionResult:
     error_type: str | None = None
     http_status: int | None = None
     attempts: int = 1
+    attempt_latency_ms: float | None = None
 
 
 @dataclass(slots=True)
@@ -81,6 +82,7 @@ class RequestResult:
     http_status: int | None
     attempts: int
     max_tokens: int | None = None
+    attempt_latency_ms: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

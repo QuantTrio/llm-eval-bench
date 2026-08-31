@@ -115,6 +115,8 @@ class BenchmarkRunner:
         duration: float,
         max_requests: int | None = None,
         on_result: ResultCallback | None = None,
+        request_rate: float | None = None,
+        ramp_seconds: float = 0.0,
     ) -> tuple[list[RequestResult], float]:
         if duration <= 0 and max_requests is None:
             raise ValueError("duration must be positive when max_requests is not set")
@@ -123,15 +125,26 @@ class BenchmarkRunner:
         results: list[RequestResult] = []
         counter = 0
         lock = asyncio.Lock()
+        pacing_lock = asyncio.Lock()
+        next_start = started
 
-        async def worker() -> None:
-            nonlocal counter
+        async def worker(worker_id: int) -> None:
+            nonlocal counter, next_start
+            if ramp_seconds > 0 and self.concurrency > 1:
+                await asyncio.sleep(ramp_seconds * worker_id / (self.concurrency - 1))
             while time.perf_counter() < deadline:
                 async with lock:
                     if max_requests is not None and counter >= max_requests:
                         return
                     index = counter
                     counter += 1
+                if request_rate is not None:
+                    async with pacing_lock:
+                        now = time.perf_counter()
+                        delay = max(0.0, next_start - now)
+                        next_start = max(next_start, now) + 1.0 / request_rate
+                    if delay:
+                        await asyncio.sleep(delay)
                 item = prompts[index % len(prompts)]
                 result = await self._one(item, index + 1)
                 results.append(result)
@@ -144,7 +157,7 @@ class BenchmarkRunner:
                     if inspect.isawaitable(callback_result):
                         await callback_result
 
-        await asyncio.gather(*(worker() for _ in range(self.concurrency)))
+        await asyncio.gather(*(worker(index) for index in range(self.concurrency)))
         results.sort(key=lambda row: row.sample_id)
         return results, time.perf_counter() - started
 
@@ -193,4 +206,5 @@ class BenchmarkRunner:
             http_status=completion.http_status,
             attempts=completion.attempts,
             max_tokens=max_tokens,
+            attempt_latency_ms=completion.attempt_latency_ms,
         )

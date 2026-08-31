@@ -78,3 +78,25 @@ async def test_incremental_checkpoint_and_strict_resume(tmp_path) -> None:
     assert len(results) == 5
     assert len({result.key for result in results}) == 5
     assert len(writer.existing_results()) == 5
+
+
+@pytest.mark.asyncio
+async def test_stress_request_rate_and_ramp() -> None:
+    prompts = [
+        DatasetItem(
+            id="stress",
+            dataset="stress",
+            type="stress",
+            question="test",
+        )
+    ]
+    runner = make_runner()
+    runner.concurrency = 2
+    results, _ = await runner.stress(
+        prompts,
+        duration=0,
+        max_requests=4,
+        request_rate=1000,
+        ramp_seconds=0.001,
+    )
+    assert len(results) == 4

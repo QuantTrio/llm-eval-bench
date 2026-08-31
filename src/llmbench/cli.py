@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
+import httpx
 import typer
 
 from . import __version__
@@ -17,17 +18,20 @@ from .client import OpenAICompatibleClient
 from .comparison import IncomparableRunsError, compare_run_directories, evaluate_policy
 from .config import load_bench_config, load_yaml, secret_from_env
 from .datasets import list_datasets as dataset_catalog
-from .datasets import load_many
+from .datasets import load_many, stress_prompts
 from .metrics import summarize
-from .report import write_comparison, write_run_artifacts
+from .report import write_comparison, write_run_artifacts, write_sweep_artifacts
 from .repro import build_run_manifest, canonical_hash
 from .runner import BenchmarkRunner
+from .telemetry import PrometheusCollector, metric_delta
 
 app = typer.Typer(
     name="llmbench",
     help="Quality and concurrency benchmarks for OpenAI-compatible LLM APIs.",
     no_args_is_help=True,
 )
+executor_app = typer.Typer(help="Serve and manage the remote isolated task executor.")
+app.add_typer(executor_app, name="executor")
 
 BaseUrl = Annotated[
     str | None,
@@ -452,6 +456,77 @@ def list_models_command(base_url: BaseUrl = None, api_key: ApiKey = None) -> Non
     asyncio.run(run())
 
 
+@executor_app.command("serve")
+def executor_serve_command(
+    config: Annotated[Path, typer.Option("--config", exists=True, readable=True)],
+    host: Annotated[str | None, typer.Option("--host")] = None,
+    port: Annotated[int | None, typer.Option("--port", min=1, max=65535)] = None,
+) -> None:
+    """Serve the remote executor API."""
+    try:
+        import uvicorn
+
+        from .executor import ExecutorConfig, create_executor_app
+    except ImportError as exc:
+        raise typer.BadParameter("install quanttrio-llmbench[executor]") from exc
+    payload = load_yaml(config)
+    values = payload.get("executor") or payload
+    images = values.get("allowed_images") or []
+    if not isinstance(images, list) or not images:
+        raise typer.BadParameter("executor config requires allowed_images")
+    executor_config = ExecutorConfig(
+        allowed_images={str(image) for image in images},
+        work_dir=Path(values.get("work_dir") or ".llmbench-executor"),
+        allow_insecure=bool(values.get("allow_insecure", False)),
+        allow_network=bool(values.get("allow_network", False)),
+        network_name=values.get("network_name"),
+        network_proxy=values.get("network_proxy"),
+        allowed_domains=tuple(str(item) for item in values.get("allowed_domains", [])),
+        docker_bin=str(values.get("docker_bin") or "docker"),
+        cpus=float(values.get("cpus", 1.0)),
+        memory=str(values.get("memory") or "2g"),
+        pids_limit=int(values.get("pids_limit", 128)),
+        timeout_seconds=float(values.get("timeout_seconds", 300)),
+        output_limit_bytes=int(values.get("output_limit_bytes", 1_000_000)),
+    )
+    uvicorn.run(
+        create_executor_app(executor_config),
+        host=host or str(values.get("host") or "127.0.0.1"),
+        port=port or int(values.get("port") or 8765),
+        proxy_headers=True,
+    )
+
+
+@executor_app.command("smoke")
+def executor_smoke_command(
+    executor_url: Annotated[str, typer.Option("--executor-url", envvar="EXECUTOR_URL")],
+    ephemeral_key: Annotated[str, typer.Option("--ephemeral-key", envvar="EXECUTOR_TASK_KEY")],
+    image: Annotated[str, typer.Option("--image")],
+    timeout: Annotated[float, typer.Option("--timeout", min=0.1)] = 120.0,
+) -> None:
+    """Submit a safe smoke task and wait for its artifact."""
+    from .executor_client import RemoteExecutorClient
+
+    async def run() -> None:
+        async with RemoteExecutorClient(executor_url, timeout=timeout) as client:
+            job = await client.submit(
+                {
+                    "image": image,
+                    "command": ["-c", "print('llmbench executor ok')"],
+                    "network": False,
+                },
+                ephemeral_key=ephemeral_key,
+            )
+            completed = await client.wait(job["id"], timeout=timeout)
+            if completed["status"] != "completed":
+                typer.echo(json.dumps(completed, ensure_ascii=False), err=True)
+                raise typer.Exit(code=4)
+            artifact = await client.artifacts(job["id"])
+            typer.echo(json.dumps(artifact, ensure_ascii=False, indent=2))
+
+    asyncio.run(run())
+
+
 def _evaluation_command(
     mode: str,
     base_url: str | None,
@@ -686,12 +761,19 @@ def stress_command(
     output_dir: Annotated[Path | None, typer.Option("--output-dir")] = None,
     checkpoint_every: Annotated[int, typer.Option("--checkpoint-every", min=1)] = 1,
     progress_interval: Annotated[float, typer.Option("--progress-interval", min=0.1)] = 5.0,
+    request_rate: Annotated[float | None, typer.Option("--request-rate", min=0.01)] = None,
+    ramp_seconds: Annotated[float, typer.Option("--ramp-seconds", min=0)] = 0.0,
+    prompt_profile: Annotated[str, typer.Option("--prompt-profile")] = "mixed",
+    server_metrics: Annotated[bool, typer.Option("--server-metrics/--no-server-metrics")] = True,
 ) -> None:
     """Measure throughput and latency without scoring answers."""
 
     async def run() -> None:
         url = _required(base_url, "--base-url")
-        prompts = load_many(["stress"], limit_per_dataset=None, sample=None, seed=seed)
+        try:
+            prompts = stress_prompts(prompt_profile)
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
         async with OpenAICompatibleClient(
             base_url=url,
             api_key=_required(api_key, "--api-key"),
@@ -727,6 +809,10 @@ def stress_command(
                 "available_models": available,
                 "checkpoint_every": checkpoint_every,
                 "progress_interval": progress_interval,
+                "request_rate": request_rate,
+                "ramp_seconds": ramp_seconds,
+                "prompt_profile": prompt_profile,
+                "server_metrics": server_metrics,
             }
             directory = output_dir or _default_output("stress")
             writer = RunArtifactWriter(directory, checkpoint_every=checkpoint_every)
@@ -750,6 +836,13 @@ def stress_command(
             )
             started = time.perf_counter()
             last_progress = 0.0
+            collector = PrometheusCollector(url) if server_metrics else None
+            telemetry_before = None
+            if collector is not None:
+                try:
+                    telemetry_before = await collector.snapshot(model=selected)
+                except (httpx.HTTPError, ValueError) as exc:
+                    writer.event("telemetry_unavailable", error=str(exc))
 
             def on_result(result, completed: int, total: int) -> None:
                 nonlocal last_progress
@@ -788,6 +881,8 @@ def stress_command(
                 duration=duration,
                 max_requests=requests,
                 on_result=on_result,
+                request_rate=request_rate,
+                ramp_seconds=ramp_seconds,
             )
             summary = summarize(
                 results,
@@ -798,6 +893,17 @@ def stress_command(
                 elapsed_seconds=elapsed,
                 config=config,
             )
+            if collector is not None and telemetry_before is not None:
+                try:
+                    telemetry_after = await collector.snapshot(model=selected)
+                    summary["server_telemetry"] = {
+                        "url": telemetry_after["url"],
+                        "delta": metric_delta(
+                            telemetry_before["metrics"], telemetry_after["metrics"]
+                        ),
+                    }
+                except (httpx.HTTPError, ValueError) as exc:
+                    writer.event("telemetry_unavailable", error=str(exc))
             paths = write_run_artifacts(directory, summary, results)
             writer.write_state(
                 {
@@ -810,6 +916,161 @@ def stress_command(
             )
             writer.event("run_completed", run_id=runner.run_id, completed=len(results))
             _print_run_summary(summary, paths)
+
+    asyncio.run(run())
+
+
+@app.command("sweep")
+def sweep_command(
+    base_url: BaseUrl = None,
+    api_key: ApiKey = None,
+    model: Annotated[str | None, typer.Option("--model")] = None,
+    concurrency: Annotated[str, typer.Option("--concurrency")] = "1,4,8,16,32,64",
+    warmup_requests: Annotated[int, typer.Option("--warmup-requests", min=0)] = 20,
+    requests: Annotated[int, typer.Option("--requests", min=1)] = 200,
+    request_rate: Annotated[float | None, typer.Option("--request-rate", min=0.01)] = None,
+    ramp_seconds: Annotated[float, typer.Option("--ramp-seconds", min=0)] = 0.0,
+    prompt_profile: Annotated[str, typer.Option("--prompt-profile")] = "mixed",
+    max_tokens: Annotated[int, typer.Option("--max-tokens", min=1)] = 128,
+    timeout: Annotated[float, typer.Option("--timeout", min=0.1)] = 120.0,
+    retries: Annotated[int, typer.Option("--retries", min=0)] = 2,
+    seed: Annotated[int, typer.Option("--seed")] = 42,
+    output_dir: Annotated[Path, typer.Option("--output-dir")] = Path("runs/sweep"),
+    server_metrics: Annotated[bool, typer.Option("--server-metrics/--no-server-metrics")] = True,
+) -> None:
+    """Run warmup followed by a concurrency sweep."""
+    try:
+        levels = [int(value.strip()) for value in concurrency.split(",") if value.strip()]
+    except ValueError as exc:
+        raise typer.BadParameter("--concurrency must be comma-separated integers") from exc
+    if not levels or any(level < 1 for level in levels):
+        raise typer.BadParameter("--concurrency values must all be at least 1")
+    try:
+        prompts = stress_prompts(prompt_profile)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    async def run() -> None:
+        url = _required(base_url, "--base-url")
+        key = _required(api_key, "--api-key")
+        async with OpenAICompatibleClient(
+            base_url=url,
+            api_key=key,
+            timeout=timeout,
+            retries=retries,
+        ) as client:
+            selected, _ = await _resolve(client, model)
+            points = []
+            collector = PrometheusCollector(url) if server_metrics else None
+            for level in levels:
+                runner = BenchmarkRunner(
+                    client=client,
+                    model=selected,
+                    concurrency=level,
+                    temperature=0,
+                    top_p=1,
+                    max_tokens=max_tokens,
+                    stream=True,
+                    seed=seed,
+                )
+                if warmup_requests:
+                    await runner.stress(
+                        prompts,
+                        duration=0,
+                        max_requests=warmup_requests,
+                        request_rate=request_rate,
+                        ramp_seconds=ramp_seconds,
+                    )
+                before = None
+                if collector is not None:
+                    try:
+                        before = await collector.snapshot(model=selected)
+                    except (httpx.HTTPError, ValueError):
+                        before = None
+                point_dir = output_dir / f"c{level}"
+                writer = RunArtifactWriter(point_dir)
+                point_started = time.perf_counter()
+                writer.event(
+                    "run_started",
+                    run_id=runner.run_id,
+                    completed=0,
+                    total=requests,
+                )
+
+                def persist(
+                    result,
+                    completed: int,
+                    total: int,
+                    point_writer=writer,
+                    started_at=point_started,
+                ) -> None:
+                    point_writer.append_result(
+                        result,
+                        completed=completed,
+                        total=total,
+                        elapsed_seconds=time.perf_counter() - started_at,
+                    )
+
+                typer.echo(
+                    f"Sweep concurrency={level}: warmup={warmup_requests} requests={requests}"
+                )
+                results, elapsed = await runner.stress(
+                    prompts,
+                    duration=0,
+                    max_requests=requests,
+                    on_result=persist,
+                    request_rate=request_rate,
+                    ramp_seconds=ramp_seconds,
+                )
+                summary = summarize(
+                    results,
+                    run_id=runner.run_id,
+                    mode="sweep",
+                    model=selected,
+                    base_url=url,
+                    elapsed_seconds=elapsed,
+                    config={
+                        "datasets": ["stress"],
+                        "concurrency": level,
+                        "warmup_requests": warmup_requests,
+                        "requests": requests,
+                        "request_rate": request_rate,
+                        "ramp_seconds": ramp_seconds,
+                        "prompt_profile": prompt_profile,
+                        "max_tokens": max_tokens,
+                        "stream": True,
+                    },
+                )
+                if collector is not None and before is not None:
+                    try:
+                        after = await collector.snapshot(model=selected)
+                        summary["server_telemetry"] = {
+                            "url": after["url"],
+                            "delta": metric_delta(before["metrics"], after["metrics"]),
+                        }
+                    except (httpx.HTTPError, ValueError):
+                        pass
+                write_run_artifacts(point_dir, summary, results)
+                writer.write_state(
+                    {
+                        "status": "completed",
+                        "completed": len(results),
+                        "total": requests,
+                        "elapsed_seconds": elapsed,
+                        "updated_at": utc_now(),
+                    }
+                )
+                writer.event("run_completed", run_id=runner.run_id, completed=len(results))
+                points.append({"concurrency": level, "summary": summary})
+            payload = {
+                "schema_version": 2,
+                "model": selected,
+                "base_url": url,
+                "prompt_profile": prompt_profile,
+                "points": points,
+            }
+            paths = write_sweep_artifacts(output_dir, payload)
+            typer.echo(f"Sweep report: {paths['html']}")
 
     asyncio.run(run())
 

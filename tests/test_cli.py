@@ -208,3 +208,37 @@ def test_cli_yaml_config_and_cli_override(mock_server: str, tmp_path, monkeypatc
     assert result.exit_code == 0, result.exception
     raw = json.loads((output / "raw_results.jsonl").read_text())
     assert raw["max_tokens"] == 32
+
+
+def test_cli_concurrency_sweep(mock_server: str, tmp_path) -> None:
+    output = tmp_path / "sweep"
+    result = CliRunner().invoke(
+        app,
+        [
+            "sweep",
+            "--base-url",
+            mock_server,
+            "--api-key",
+            "EMPTY",
+            "--model",
+            "mock-model",
+            "--concurrency",
+            "1,2",
+            "--warmup-requests",
+            "1",
+            "--requests",
+            "2",
+            "--prompt-profile",
+            "short",
+            "--no-server-metrics",
+            "--output-dir",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 0, result.exception
+    payload = json.loads((output / "sweep.json").read_text())
+    assert [point["concurrency"] for point in payload["points"]] == [1, 2]
+    assert all(
+        point["summary"]["performance"]["total_requests"] == 2 for point in payload["points"]
+    )
+    assert (output / "sweep.html").exists()

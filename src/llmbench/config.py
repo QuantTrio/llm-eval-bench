@@ -23,10 +23,10 @@ def load_bench_config(path: Path) -> dict[str, Any]:
     payload = load_yaml(path)
     if payload.get("schema_version") != 2:
         raise ValueError("bench config schema_version must be 2")
-    targets = payload.get("targets") or {}
+    targets = payload.get("targets", {})
     if not isinstance(targets, dict):
         raise ValueError("bench config targets must be an object")
-    run = payload.get("run") or {}
+    run = payload.get("run", {})
     if not isinstance(run, dict):
         raise ValueError("bench config run must be an object")
     return payload

@@ -48,6 +48,9 @@ def summarize(
     latency = [result.latency_ms for result in successful]
     ttft = [result.ttft_ms for result in successful if result.ttft_ms is not None]
     tpot = [result.tpot_ms for result in successful if result.tpot_ms is not None]
+    attempt_latency = [
+        result.attempt_latency_ms for result in successful if result.attempt_latency_ms is not None
+    ]
     errors = Counter(result.error_type or "unknown" for result in results if result.error)
 
     quality: dict[str, Any] = {
@@ -177,6 +180,7 @@ def summarize(
             else 0.0
         ),
         "latency_ms": _distribution(latency),
+        "final_attempt_latency_ms": _distribution(attempt_latency),
         "ttft_ms": _distribution(ttft),
         "tpot_ms": _distribution(tpot),
         "errors": dict(sorted(errors.items())),

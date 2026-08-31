@@ -10,7 +10,7 @@ raw responses plus JSON, Markdown, and HTML reports.
 Install the tagged release in one command:
 
 ```bash
-python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.3.0/quanttrio_llmbench-0.3.0-py3-none-any.whl"
+python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.4.0/quanttrio_llmbench-0.4.0-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:
@@ -69,6 +69,9 @@ llmbench run --limit 100 --concurrency 32 --stream
 # Fixed-duration or fixed-request load tests
 llmbench stress --duration 60 --concurrency 64 --max-tokens 128
 llmbench stress --requests 500 --concurrency 64 --max-tokens 128
+
+# Warmed concurrency sweep with separate reports per level
+llmbench sweep --concurrency 1,4,8,16,32,64 --warmup-requests 20 --requests 200
 ```
 
 | Parameter | Meaning |
@@ -86,6 +89,8 @@ llmbench stress --requests 500 --concurrency 64 --max-tokens 128
 | `--stream` / `--no-stream` | Enable or disable SSE; streaming enables TTFT/TPOT. |
 | `--timeout`, `--retries`, `--retry-backoff` | Request failure policy. |
 | `--duration` / `--requests` | Stress-test stopping condition. |
+| `--request-rate`, `--ramp-seconds` | Optional fixed arrival rate and gradual worker start. |
+| `--prompt-profile` | `short`, `medium`, `long`, or bundled `mixed` stress prompts. |
 | `--output-dir` | Run artifact directory; generated automatically when omitted. |
 | `--memory-gb` | Optional measured model-memory value recorded in the report. |
 | `--checkpoint-every` | Durably sync after this many completed requests; defaults to 1. |
@@ -223,6 +228,28 @@ generation settings. It emits a paired result JSONL, per-dataset changes, correc
 transitions, and deterministic 95% bootstrap confidence intervals. Exit codes are `0` for pass,
 `2` for a regression-policy failure, `3` for incomparable runs, and `4` for infrastructure or
 artifact errors.
+
+## Remote executor
+
+Install the service dependencies and start the API:
+
+```bash
+python -m pip install 'quanttrio-llmbench[executor]'
+llmbench executor serve --config executor/executor.yaml
+```
+
+Validate a deployment with an ephemeral task key:
+
+```bash
+export EXECUTOR_URL=https://executor.example.com
+export EXECUTOR_TASK_KEY=short-lived-secret
+llmbench executor smoke --image quanttrio/llmbench-sandbox:0.4.0
+```
+
+Executor jobs run in allowlisted, read-only remote containers with CPU, memory, PID, output, and
+time limits. Network is disabled by default; enabled jobs join an internal-only network and use
+an allowlisted egress proxy. Temporary keys are held only for the task and redacted from stored
+requests, events, errors, and artifacts. See [docs/EXECUTOR.md](docs/EXECUTOR.md).
 
 ## Custom local datasets
 

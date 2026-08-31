@@ -7,7 +7,7 @@ from importlib.resources import files
 import pytest
 
 from llmbench.catalog import benchmark_catalog, list_benchmarks
-from llmbench.datasets import list_datasets, load_dataset, load_many
+from llmbench.datasets import list_datasets, load_dataset, load_many, stress_prompts
 
 
 def test_bundled_dataset_manifest_and_checksums() -> None:
@@ -66,3 +66,11 @@ def test_datalearner_catalog_snapshot() -> None:
     top = list_benchmarks(category="科学", bundled_only=True)
     assert top[0]["code"] == "gpqa-diamond"
     assert top[0]["report_count"] >= 200
+
+
+def test_stress_prompt_profiles() -> None:
+    assert stress_prompts("short")[0].metadata["prompt_profile"] == "short"
+    assert len(stress_prompts("medium")[0].question) > len(stress_prompts("short")[0].question)
+    assert stress_prompts("mixed")[0].dataset == "stress"
+    with pytest.raises(ValueError, match="prompt profile"):
+        stress_prompts("invalid")

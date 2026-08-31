@@ -1,0 +1,18 @@
+executor:
+  host: 0.0.0.0
+  port: 8765
+  work_dir: /var/lib/llmbench
+  allow_insecure: false
+  allow_network: false
+  network_name: llmbench-sandbox
+  network_proxy: http://egress-proxy:3128
+  allowed_domains:
+    - .wikipedia.org
+    - .github.com
+  allowed_images:
+    - quanttrio/llmbench-sandbox:0.4.0
+  cpus: 1.0
+  memory: 2g
+  pids_limit: 128
+  timeout_seconds: 300
+  output_limit_bytes: 1000000

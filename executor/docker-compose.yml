@@ -1,0 +1,35 @@
+services:
+  executor:
+    build:
+      context: ..
+      dockerfile: executor/Dockerfile
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - ./executor.yaml:/config/executor.yaml:ro
+      - ${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock
+      - executor-work:/var/lib/llmbench
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - default
+      - sandbox
+
+  egress-proxy:
+    image: ubuntu/squid:6.13-24.10_edge
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf:ro
+    networks:
+      - sandbox
+      - egress
+    restart: unless-stopped
+
+volumes:
+  executor-work:
+
+networks:
+  sandbox:
+    name: llmbench-sandbox
+    internal: true
+  egress: {}

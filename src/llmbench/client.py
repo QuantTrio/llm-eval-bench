@@ -94,6 +94,7 @@ class OpenAICompatibleClient:
         if stream:
             body["stream_options"] = {"include_usage": True}
 
+        overall_started = time.perf_counter()
         for attempt in range(1, self.retries + 2):
             started = time.perf_counter()
             try:
@@ -102,6 +103,8 @@ class OpenAICompatibleClient:
                 else:
                     result = await self._json_completion(body, started)
                 result.attempts = attempt
+                result.attempt_latency_ms = result.latency_ms
+                result.latency_ms = (time.perf_counter() - overall_started) * 1000
                 return result
             except httpx.TimeoutException as exc:
                 result = self._error_result(started, "timeout", exc, attempts=attempt)
@@ -116,6 +119,8 @@ class OpenAICompatibleClient:
 
             if attempt <= self.retries:
                 await asyncio.sleep(self.retry_backoff * (2 ** (attempt - 1)))
+        result.attempt_latency_ms = result.latency_ms
+        result.latency_ms = (time.perf_counter() - overall_started) * 1000
         return result
 
     async def _json_completion(self, body: dict[str, Any], started: float) -> CompletionResult:

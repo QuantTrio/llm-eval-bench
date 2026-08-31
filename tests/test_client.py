@@ -41,6 +41,8 @@ async def test_model_discovery_and_json_completion() -> None:
     assert result.content == '{"answer":"A"}'
     assert result.input_tokens == 10
     assert result.output_tokens == 4
+    assert result.attempt_latency_ms is not None
+    assert result.latency_ms >= result.attempt_latency_ms
 
 
 @pytest.mark.asyncio
@@ -106,3 +108,5 @@ async def test_retries_429_then_succeeds() -> None:
     assert attempts == 2
     assert result.error is None
     assert result.attempts == 2
+    assert result.attempt_latency_ms is not None
+    assert result.latency_ms >= result.attempt_latency_ms

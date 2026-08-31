@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 - 2026-08-31
+
+- Add warmup, fixed-RPS pacing, worker ramp, prompt profiles, and concurrency sweep reports.
+- Add per-run Prometheus baselines and vLLM counter deltas.
+- Separate user-observed latency from final-attempt latency.
+- Add the remote executor API, client, SSE events, cancellation, and artifacts.
+- Add rootless-container defaults, ephemeral-key redaction, limits, and allowlisted proxy egress.
+
 ## 0.3.0 - 2026-08-31
 
 - Add schema-v2 YAML run configuration with explicit CLI precedence.
