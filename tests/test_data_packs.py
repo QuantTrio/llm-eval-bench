@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from importlib.resources import files
+from pathlib import Path
 
 from typer.testing import CliRunner
 
@@ -85,3 +87,30 @@ def test_empty_data_packs_and_category_coverage(monkeypatch) -> None:
     coverage = CliRunner().invoke(app, ["coverage"])
     assert coverage.exit_code == 0
     assert "Coverage: 3/21 categories" in coverage.stdout
+
+
+def test_consolidated_public_pack_manifest() -> None:
+    path = (
+        Path(__file__).parents[1] / "data-packs" / "all-public" / "llmbench_data_all" / "pack.json"
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    expected = {
+        "agieval",
+        "aider-polyglot",
+        "aime-2025",
+        "browsecomp",
+        "humaneval",
+        "ifbench",
+        "longbench-v2",
+        "mmmu",
+        "mteb-retrieval-mini",
+        "pinchbench",
+        "simple-bench",
+        "simpleqa",
+        "terminal-bench-2",
+    }
+    assert payload["name"] == "quanttrio-llmbench-data-all"
+    assert payload["version"] == "0.5.0"
+    assert set(payload["datasets"]) == expected
+    assert set(payload["source_packs"]) == expected
+    assert all(item["source_pack_version"] == "0.5.0" for item in payload["datasets"].values())

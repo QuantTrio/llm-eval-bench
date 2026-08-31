@@ -1,0 +1,4 @@
+BrowseComp encrypted test set
+Source: https://openaipublic.blob.core.windows.net/simple-evals/browse_comp_test_set.csv
+Harness revision: openai/simple-evals 652c89d0ca9df547706735883097e9537d40dc47
+Do not reveal benchmark questions or answers in plaintext or screenshots.

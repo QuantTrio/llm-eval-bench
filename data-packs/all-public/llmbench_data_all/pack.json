@@ -1,0 +1,272 @@
+{
+  "name": "quanttrio-llmbench-data-all",
+  "version": "0.5.0",
+  "package": "llmbench_data_all",
+  "source_revision": {
+    "agieval": "84ab72d94318290aad2e4ec820d535a95a1f7552",
+    "aider-polyglot": "7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f",
+    "aime-2025": "a7b26602f8321cf71132eeb57c7f4d163e9b5a50",
+    "browsecomp": "652c89d0ca9df547706735883097e9537d40dc47",
+    "humaneval": "6d43fb980f9fee3c892a914eda09951f772ad10d",
+    "ifbench": "2e8a48de45ff3bf41242f927254ca81b59ca3ae2",
+    "longbench-v2": "2b48e494f2c7a2f0af81aae178e05c7e1dde0fe9",
+    "mmmu": "98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68",
+    "mteb-retrieval-mini": "6c1bcf74b13dfd823aff056b79d4d93e702f19c7",
+    "pinchbench": "97118e1f6bb1e8993458f84ed85927f5e328f174",
+    "simple-bench": "fbc2e429085bdedad7d1a236d2bc9bc18c95f16e",
+    "simpleqa": "652c89d0ca9df547706735883097e9537d40dc47",
+    "terminal-bench-2": "2fd12b88aafdd04a52c298e3940bcb189f9766d6"
+  },
+  "source_packs": {
+    "agieval": {
+      "name": "quanttrio-llmbench-data-agieval",
+      "version": "0.5.0"
+    },
+    "aider-polyglot": {
+      "name": "quanttrio-llmbench-data-aider-polyglot",
+      "version": "0.5.0"
+    },
+    "aime-2025": {
+      "name": "quanttrio-llmbench-data-aime-2025",
+      "version": "0.5.0"
+    },
+    "browsecomp": {
+      "name": "quanttrio-llmbench-data-browsecomp",
+      "version": "0.5.0"
+    },
+    "humaneval": {
+      "name": "quanttrio-llmbench-data-humaneval",
+      "version": "0.5.0"
+    },
+    "ifbench": {
+      "name": "quanttrio-llmbench-data-ifbench",
+      "version": "0.5.0"
+    },
+    "longbench-v2": {
+      "name": "quanttrio-llmbench-data-longbench-v2",
+      "version": "0.5.0"
+    },
+    "mmmu": {
+      "name": "quanttrio-llmbench-data-mmmu",
+      "version": "0.5.0"
+    },
+    "mteb-retrieval-mini": {
+      "name": "quanttrio-llmbench-data-mteb-retrieval-mini",
+      "version": "0.5.0"
+    },
+    "pinchbench": {
+      "name": "quanttrio-llmbench-data-pinchbench",
+      "version": "0.5.0"
+    },
+    "simple-bench": {
+      "name": "quanttrio-llmbench-data-simple-bench",
+      "version": "0.5.0"
+    },
+    "simpleqa": {
+      "name": "quanttrio-llmbench-data-simpleqa",
+      "version": "0.5.0"
+    },
+    "terminal-bench-2": {
+      "name": "quanttrio-llmbench-data-terminal-bench-2",
+      "version": "0.5.0"
+    }
+  },
+  "datasets": {
+    "agieval": {
+      "file": "agieval.jsonl",
+      "count": 200,
+      "type": "multiple_choice",
+      "category": "综合能力",
+      "metric": "accuracy",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://github.com/ruixiangcui/AGIEval/tree/84ab72d94318290aad2e4ec820d535a95a1f7552/data/v1_1",
+      "sha256": "8540c39056bd2f6941c131ce6334dd6af4e2bfc17a9f3fde73cf5a2480f1464f",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true,
+      "source_pack": "quanttrio-llmbench-data-agieval",
+      "source_pack_version": "0.5.0"
+    },
+    "aider-polyglot": {
+      "file": "aider-polyglot.jsonl",
+      "count": 200,
+      "type": "agent",
+      "category": "Agent能力评测",
+      "metric": "pass_rate_1",
+      "license": "LicenseRef-Upstream-Mixed",
+      "restriction": "requires version-matched remote executor image",
+      "source": "https://api.github.com/repos/Aider-AI/polyglot-benchmark/git/trees/7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f?recursive=1",
+      "sha256": "1f3ca82959b9547684c52f3ddacfd948eb60cd226038888f2e8e1208bd0a97cf",
+      "recommended_max_tokens": 8192,
+      "regression_subset": true,
+      "source_pack": "quanttrio-llmbench-data-aider-polyglot",
+      "source_pack_version": "0.5.0"
+    },
+    "aime-2025": {
+      "file": "aime-2025.jsonl",
+      "count": 30,
+      "type": "math",
+      "category": "数学推理",
+      "metric": "exact_match",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://huggingface.co/datasets/test-time-compute/aime_2025/resolve/a7b26602f8321cf71132eeb57c7f4d163e9b5a50/data/test-00000-of-00001.parquet",
+      "sha256": "6838a17a02f88e2e87ecce67df3c941e9376659cdf30b635c87df8ecc9524ec7",
+      "recommended_max_tokens": 8192,
+      "official_full_set": true,
+      "source_pack": "quanttrio-llmbench-data-aime-2025",
+      "source_pack_version": "0.5.0"
+    },
+    "browsecomp": {
+      "file": "browsecomp.jsonl",
+      "count": 100,
+      "type": "agent",
+      "category": "AI Agent - 信息收集",
+      "metric": "judge_accuracy",
+      "license": "MIT",
+      "restriction": "encrypted; do not reveal questions or answers",
+      "source": "https://openaipublic.blob.core.windows.net/simple-evals/browse_comp_test_set.csv",
+      "sha256": "ede075914aae0c374cb1ca3d7490f66b53a875187e9de52d37900ceb45e263b9",
+      "recommended_max_tokens": 8192,
+      "regression_subset": true,
+      "sensitive": true,
+      "source_pack": "quanttrio-llmbench-data-browsecomp",
+      "source_pack_version": "0.5.0"
+    },
+    "humaneval": {
+      "file": "humaneval.jsonl",
+      "count": 100,
+      "type": "code",
+      "category": "代码能力",
+      "metric": "pass_at_1",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://raw.githubusercontent.com/openai/human-eval/6d43fb980f9fee3c892a914eda09951f772ad10d/data/HumanEval.jsonl.gz",
+      "sha256": "04994a0f4d1b270cebfc8038ca0d3c94a170a2d3e4e53e9ba7f6c560768c1fb9",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true,
+      "source_pack": "quanttrio-llmbench-data-humaneval",
+      "source_pack_version": "0.5.0"
+    },
+    "ifbench": {
+      "file": "ifbench.jsonl",
+      "count": 200,
+      "type": "instruction",
+      "category": "指令跟随",
+      "metric": "prompt_loose_accuracy",
+      "license": "ODC-By-1.0",
+      "restriction": "Ai2 Responsible Use and third-party output terms",
+      "source": "https://huggingface.co/datasets/allenai/IFBench_test/resolve/2e8a48de45ff3bf41242f927254ca81b59ca3ae2/data/train-00000-of-00001.parquet",
+      "sha256": "95d093e100d3cbcffa5fc7f34f4ed5ba28242059b97f2328328fef8e6f98b553",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true,
+      "source_pack": "quanttrio-llmbench-data-ifbench",
+      "source_pack_version": "0.5.0"
+    },
+    "longbench-v2": {
+      "file": "longbench-v2.jsonl",
+      "count": 200,
+      "type": "multiple_choice",
+      "category": "长上下文能力",
+      "metric": "accuracy",
+      "license": "Apache-2.0",
+      "restriction": null,
+      "source": "https://huggingface.co/datasets/zai-org/LongBench-v2/resolve/2b48e494f2c7a2f0af81aae178e05c7e1dde0fe9/data.json",
+      "sha256": "30dda1e85f66adf215432906ff11a26ef140d93b47e02cceb1f36de1c1f83aa2",
+      "recommended_max_tokens": 8192,
+      "regression_subset": true,
+      "source_pack": "quanttrio-llmbench-data-longbench-v2",
+      "source_pack_version": "0.5.0"
+    },
+    "mmmu": {
+      "file": "mmmu.jsonl",
+      "count": 500,
+      "type": "multiple_choice",
+      "category": "多模态理解",
+      "metric": "accuracy",
+      "license": "Apache-2.0",
+      "restriction": null,
+      "source": "https://huggingface.co/datasets/MMMU/MMMU/resolve/98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68",
+      "sha256": "391548531838785781989852f5f980e1f733f8bb35fd62c51ec493d49a9c6b1e",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true,
+      "source_pack": "quanttrio-llmbench-data-mmmu",
+      "source_pack_version": "0.5.0"
+    },
+    "mteb-retrieval-mini": {
+      "file": "mteb-retrieval-mini.jsonl",
+      "count": 500,
+      "type": "embedding",
+      "category": "文本向量检索",
+      "metric": "recall_at_1",
+      "license": "CC-BY-SA-4.0",
+      "restriction": null,
+      "source": "https://huggingface.co/datasets/mteb/arguana/tree/6c1bcf74b13dfd823aff056b79d4d93e702f19c7",
+      "sha256": "04fe25c14962ccebfc323291c5da39bdaaa30011b4024b5dc5585fd1d22a6a1c",
+      "recommended_max_tokens": 1,
+      "regression_subset": true,
+      "source_pack": "quanttrio-llmbench-data-mteb-retrieval-mini",
+      "source_pack_version": "0.5.0"
+    },
+    "pinchbench": {
+      "file": "pinchbench.jsonl",
+      "count": 23,
+      "type": "agent",
+      "category": "OpenClaw智能体能力综合测评",
+      "metric": "success_rate",
+      "license": "MIT",
+      "restriction": "requires remote OpenClaw executor and task-specific accounts",
+      "source": "https://api.github.com/repos/Studio-Intrinsic/clawbench/git/trees/97118e1f6bb1e8993458f84ed85927f5e328f174?recursive=1",
+      "sha256": "88bb07af3b2c32bb54298349c01a95410bc8f556db442498e5d99edc803ca498",
+      "recommended_max_tokens": 8192,
+      "official_full_set": true,
+      "source_pack": "quanttrio-llmbench-data-pinchbench",
+      "source_pack_version": "0.5.0"
+    },
+    "simple-bench": {
+      "file": "simple-bench.jsonl",
+      "count": 10,
+      "type": "multiple_choice",
+      "category": "常识推理",
+      "metric": "accuracy",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://api.github.com/repos/simple-bench/SimpleBench/contents/simple_bench_public.json?ref=fbc2e429085bdedad7d1a236d2bc9bc18c95f16e",
+      "sha256": "ec1effd0f88529c7ce48866fbe30e61fb2e99e5eac269bb1e47346ccb6f74faa",
+      "recommended_max_tokens": 4096,
+      "official_public_full_set": true,
+      "source_pack": "quanttrio-llmbench-data-simple-bench",
+      "source_pack_version": "0.5.0"
+    },
+    "simpleqa": {
+      "file": "simpleqa.jsonl",
+      "count": 500,
+      "type": "judge",
+      "category": "常识问答",
+      "metric": "judge_accuracy",
+      "license": "MIT",
+      "restriction": null,
+      "source": "https://openaipublic.blob.core.windows.net/simple-evals/simple_qa_test_set.csv",
+      "sha256": "7ec9c9c5c996b248b2e27a4e48e4951dcaf6639070a7580bd0730aa57dd0ec65",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true,
+      "source_pack": "quanttrio-llmbench-data-simpleqa",
+      "source_pack_version": "0.5.0"
+    },
+    "terminal-bench-2": {
+      "file": "terminal-bench-2.jsonl",
+      "count": 89,
+      "type": "agent",
+      "category": "AI Agent - 工具使用",
+      "metric": "success_rate",
+      "license": "Apache-2.0",
+      "restriction": "requires version-matched remote executor image",
+      "source": "https://api.github.com/repos/harbor-framework/terminal-bench-2/git/trees/2fd12b88aafdd04a52c298e3940bcb189f9766d6?recursive=1",
+      "sha256": "0799493f3d3ccb79a1b7dfc82ad39c296e48a8d85442f3ff96907e76ba8a0fe3",
+      "recommended_max_tokens": 8192,
+      "official_full_set": true,
+      "source_pack": "quanttrio-llmbench-data-terminal-bench-2",
+      "source_pack_version": "0.5.0"
+    }
+  }
+}

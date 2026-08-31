@@ -7,10 +7,18 @@ raw responses plus JSON, Markdown, and HTML reports.
 
 ## Install
 
-Install the tagged release in one command:
+Install the tagged framework wheel:
 
 ```bash
 python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.1/quanttrio_llmbench-1.0.1-py3-none-any.whl"
+```
+
+Install the framework and every publicly redistributable data asset with exactly two wheels:
+
+```bash
+python -m pip install \
+  "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.1/quanttrio_llmbench-1.0.1-py3-none-any.whl" \
+  "quanttrio-llmbench-data-all @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.5.0/quanttrio_llmbench_data_all-0.5.0-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:
@@ -149,16 +157,17 @@ C-Eval data is CC BY-NC-SA 4.0 and is restricted to non-commercial use. See
 
 ## Optional data wheels and capability suites
 
-The stable executable matrix covers 21 benchmark categories. The v0.5.0 Release contains all 13
-data wheels that can be redistributed publicly. Together with the three core representatives in
-v1.0.1, installing every public wheel provides `16/21` category coverage. The remaining five
-packs must be built locally because of upstream licensing or mixed assets.
+The stable executable matrix covers 21 benchmark categories. The v0.5.0 Release provides one
+aggregate wheel containing all 13 data assets or task descriptors that can be redistributed
+publicly. It is a real data wheel, not a dependency-only metapackage. Together with the three core
+representatives in v1.0.1, the two-wheel installation provides `16/21` category coverage. The
+remaining five packs must be built locally because of upstream licensing or mixed assets.
 
-### Install v1.0.1 and every public v0.5.0 data wheel
+### Install the two-wheel bundle
 
-The following downloads the official Release assets and installs the core plus all public data
-wheels in one `pip install` invocation. The compressed wheels require about 250 MB; allow at least
-1 GB for the virtual environment and extracted datasets. This method requires the
+The following downloads the two official Release assets and installs them in one `pip install`
+invocation. The aggregate data wheel is about 235 MB compressed and contains about 489 MB of data;
+allow at least 1 GB for the virtual environment and extracted datasets. This method requires the
 [GitHub CLI](https://cli.github.com/).
 
 ```bash
@@ -176,13 +185,13 @@ gh release download v1.0.1 \
 
 gh release download v0.5.0 \
   --repo QuantTrio/llm-eval-bench \
-  --pattern 'quanttrio_llmbench_data_*.whl' \
+  --pattern 'quanttrio_llmbench_data_all-0.5.0-py3-none-any.whl' \
   --dir llmbench-wheels/data \
   --clobber
 
 python -m pip install \
   llmbench-wheels/core/quanttrio_llmbench-1.0.1-py3-none-any.whl \
-  llmbench-wheels/data/*.whl
+  llmbench-wheels/data/quanttrio_llmbench_data_all-0.5.0-py3-none-any.whl
 
 python -c 'import llmbench; print(llmbench.__version__)'
 llmbench data list
@@ -200,6 +209,10 @@ The five local-build-only packs are Creative Writing v3, MMEB-v2 Image, GDPval G
 LiveCodeBench, and SuperGLUE. Their pinned builders are under `data-packs/` in the source archive.
 After reviewing their upstream terms and obtaining any required source access, build and install
 those wheels to reach `21/21`. See [data-packs/README.md](data-packs/README.md).
+
+The 13 original per-benchmark wheels remain available for selective installations. Do not install
+them together with `quanttrio-llmbench-data-all`, because both forms intentionally expose the same
+dataset IDs.
 
 ### Configure and start evaluation
 

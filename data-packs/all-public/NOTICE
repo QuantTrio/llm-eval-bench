@@ -1,0 +1,5 @@
+QuantTrio llmbench consolidated public regression data pack
+
+This wheel aggregates independently licensed benchmark datasets and task descriptors. Each
+dataset retains its upstream license, source revision, attribution, and restrictions. See the
+pack manifest and the per-dataset files under llmbench_data_all/licenses/.
