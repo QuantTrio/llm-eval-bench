@@ -20,15 +20,6 @@ Install the smaller framework-only wheel when optional data is not needed:
 python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.1/quanttrio_llmbench-1.0.1-py3-none-any.whl"
 ```
 
-The framework wheel plus the separate aggregate data wheel remains available as a two-wheel
-alternative:
-
-```bash
-python -m pip install \
-  "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.1/quanttrio_llmbench-1.0.1-py3-none-any.whl" \
-  "quanttrio-llmbench-data-all @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.5.0/quanttrio_llmbench_data_all-0.5.0-py3-none-any.whl"
-```
-
 Or install the current `main` branch:
 
 ```bash
@@ -217,10 +208,10 @@ LiveCodeBench, and SuperGLUE. Their pinned builders are under `data-packs/` in t
 After reviewing their upstream terms and obtaining any required source access, build and install
 those wheels to reach `21/21`. See [data-packs/README.md](data-packs/README.md).
 
-The separate `quanttrio-llmbench` framework wheel, `quanttrio-llmbench-data-all` aggregate wheel,
-and 13 original per-benchmark wheels remain available for smaller or selective installations. Do
-not install any of them alongside `quanttrio-llmbench-full`, because the distributions
-intentionally provide the same framework files or dataset IDs.
+The standalone data-wheel projects remain in the source tree for maintainers and selective local
+builds, but the supported public installation is the v1.0.1 full wheel. Do not install locally
+built standalone wheels alongside `quanttrio-llmbench-full`, because the distributions
+intentionally provide the same dataset IDs.
 
 ### Configure and start evaluation
 
@@ -396,8 +387,8 @@ artifact errors.
 
 v1.0 freezes the documented CLI commands, YAML schema v2, report schema v2, comparison exit
 codes, and the 21-category capability matrix. Future 1.x releases may add optional fields and
-commands but will continue to read valid v1.0 artifacts. Data wheels are versioned independently;
-the v0.5.0 wheels published with the benchmark matrix remain compatible with core v1.0.x.
+commands but will continue to read valid v1.0 artifacts. The v1.0.1 full wheel embeds the stable
+public data-pack contract and assets in the same installation artifact.
 
 See [docs/STABLE_API.md](docs/STABLE_API.md) for the complete stability and deprecation policy.
 

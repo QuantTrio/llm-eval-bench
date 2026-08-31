@@ -52,9 +52,10 @@ agent targets are independent. A missing or incompatible target is reported as `
 excluded from score aggregation while reducing coverage.
 
 Data packages use the `llmbench.data.v1` entry-point contract and include a version, source
-revision, SHA-256, license metadata, sample count, and selection description. Core 1.0.0 remains
-compatible with the v0.5.0 data wheels. HLE and Fiction.liveBench are retained only in the
-immutable 157-entry reference catalog and are not part of the stable coverage denominator.
+revision, SHA-256, license metadata, sample count, and selection description. The v1.0.1 full
+wheel embeds the stable public data packs with the framework. HLE and Fiction.liveBench are
+retained only in the immutable 157-entry reference catalog and are not part of the stable coverage
+denominator.
 
 ## Executor boundary
 
