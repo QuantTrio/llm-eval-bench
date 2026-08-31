@@ -2,6 +2,7 @@
 
 ## 1.0.1 - 2026-08-31
 
+- Remove the MTEB retrieval mini dataset and text-embedding retrieval category from the full wheel.
 - Catch the Python 3.10-specific `asyncio.TimeoutError` in the executor timeout path while
   preserving the stable public `TimeoutError` contract.
 - Add one v1.0.1 full wheel containing the framework, CLI, core assets, and consolidated public

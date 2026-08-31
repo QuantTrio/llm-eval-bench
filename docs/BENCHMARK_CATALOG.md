@@ -1,7 +1,7 @@
 # Benchmark selection and support boundary
 
-`src/llmbench/data/benchmark_catalog.json` snapshots all 157 benchmarks and 23 categories shown
-by DataLearner on 2026-08-28. Each entry includes its public report count, category, metric,
+`src/llmbench/data/benchmark_catalog.json` contains a curated 155-benchmark, 22-category snapshot
+based on DataLearner on 2026-08-28. Each entry includes its public report count, category, metric,
 problem count, institution, and source links. Refresh it with:
 
 ```bash
@@ -39,4 +39,3 @@ Truthfulness, and Reading Comprehension. Every report keeps those categories sep
 
 `llmbench list-benchmarks --top 20` shows the most reported entries; add `--bundled-only` to see
 the implemented subset.
-

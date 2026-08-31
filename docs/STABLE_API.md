@@ -47,14 +47,14 @@ unweighted accuracy score.
 
 ## Capability and data contract
 
-The stable representative matrix contains 21 categories. Chat, multimodal, embedding, Judge, and
+The stable representative matrix contains 20 categories. Chat, multimodal, embedding, Judge, and
 agent targets are independent. A missing or incompatible target is reported as `unsupported` and
 excluded from score aggregation while reducing coverage.
 
 Data packages use the `llmbench.data.v1` entry-point contract and include a version, source
 revision, SHA-256, license metadata, sample count, and selection description. The v1.0.1 full
 wheel embeds the stable public data packs with the framework. HLE and Fiction.liveBench are
-retained only in the immutable 157-entry reference catalog and are not part of the stable coverage
+retained only in the curated 155-entry reference catalog and are not part of the stable coverage
 denominator.
 
 ## Executor boundary

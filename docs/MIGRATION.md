@@ -28,7 +28,7 @@ must not be mixed with a schema-v2 run in a paired regression comparison.
 - Install benchmark assets as optional `quanttrio-llmbench-data-*` wheels.
 - Run `llmbench data verify` after installation and `llmbench coverage` before a suite.
 - Configure chat, multimodal, embedding, Judge, and agent targets independently.
-- Stable executable coverage is 21 categories. HLE and Fiction.liveBench remain catalog-only.
+- Stable executable coverage is 20 categories. HLE and Fiction.liveBench remain catalog-only.
 
 ## v0.5.0 to v0.6.0
 
@@ -41,7 +41,7 @@ must not be mixed with a schema-v2 run in a paired regression comparison.
 - No report or configuration conversion is required; schema version 2 is the stable 1.x contract.
 - Core and executor examples use the `1.0.0` image tag. Keep using integrity-verified v0.5.0 data
   wheels unless a benchmark-specific update is required.
-- Stable coverage is 21 categories. The two catalog-only entries are intentionally not counted as
+- Stable coverage is 20 categories. The two catalog-only entries are intentionally not counted as
   unsupported or zero-scored categories.
 - Review [STABLE_API.md](STABLE_API.md) before depending on implementation-only Python modules.
 

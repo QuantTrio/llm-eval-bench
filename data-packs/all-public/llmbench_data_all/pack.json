@@ -11,7 +11,6 @@
     "ifbench": "2e8a48de45ff3bf41242f927254ca81b59ca3ae2",
     "longbench-v2": "2b48e494f2c7a2f0af81aae178e05c7e1dde0fe9",
     "mmmu": "98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68",
-    "mteb-retrieval-mini": "6c1bcf74b13dfd823aff056b79d4d93e702f19c7",
     "pinchbench": "97118e1f6bb1e8993458f84ed85927f5e328f174",
     "simple-bench": "fbc2e429085bdedad7d1a236d2bc9bc18c95f16e",
     "simpleqa": "652c89d0ca9df547706735883097e9537d40dc47",
@@ -48,10 +47,6 @@
     },
     "mmmu": {
       "name": "quanttrio-llmbench-data-mmmu",
-      "version": "0.5.0"
-    },
-    "mteb-retrieval-mini": {
-      "name": "quanttrio-llmbench-data-mteb-retrieval-mini",
       "version": "0.5.0"
     },
     "pinchbench": {
@@ -191,21 +186,6 @@
       "recommended_max_tokens": 4096,
       "regression_subset": true,
       "source_pack": "quanttrio-llmbench-data-mmmu",
-      "source_pack_version": "0.5.0"
-    },
-    "mteb-retrieval-mini": {
-      "file": "mteb-retrieval-mini.jsonl",
-      "count": 500,
-      "type": "embedding",
-      "category": "文本向量检索",
-      "metric": "recall_at_1",
-      "license": "CC-BY-SA-4.0",
-      "restriction": null,
-      "source": "https://huggingface.co/datasets/mteb/arguana/tree/6c1bcf74b13dfd823aff056b79d4d93e702f19c7",
-      "sha256": "04fe25c14962ccebfc323291c5da39bdaaa30011b4024b5dc5585fd1d22a6a1c",
-      "recommended_max_tokens": 1,
-      "regression_subset": true,
-      "source_pack": "quanttrio-llmbench-data-mteb-retrieval-mini",
       "source_pack_version": "0.5.0"
     },
     "pinchbench": {

@@ -63,7 +63,7 @@ def test_custom_jsonl_and_invalid_dataset(tmp_path) -> None:
 
 def test_datalearner_catalog_snapshot() -> None:
     snapshot = benchmark_catalog()
-    assert snapshot["count"] == 157
+    assert snapshot["count"] == 155
     top = list_benchmarks(category="科学", bundled_only=True)
     assert top[0]["code"] == "gpqa-diamond"
     assert top[0]["report_count"] >= 200

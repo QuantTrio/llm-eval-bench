@@ -17,7 +17,6 @@ PUBLIC_PACKS = (
     ("ifbench", "llmbench_data_ifbench"),
     ("longbench-v2", "llmbench_data_longbench_v2"),
     ("mmmu", "llmbench_data_mmmu"),
-    ("mteb-retrieval-mini", "llmbench_data_mteb_retrieval_mini"),
     ("pinchbench", "llmbench_data_pinchbench"),
     ("simple-bench", "llmbench_data_simple_bench"),
     ("simpleqa", "llmbench_data_simpleqa"),
@@ -81,6 +80,17 @@ def main() -> None:
                 "source_pack_version": source_manifest["version"],
             }
         _copy_legal_files(source, slug)
+
+    expected_files = {item["file"] for item in datasets.values()}
+    for path in PACKAGE.glob("*.jsonl"):
+        if path.name not in expected_files:
+            path.unlink()
+    expected_licenses = {slug for slug, _package_name in PUBLIC_PACKS}
+    license_root = PACKAGE / "licenses"
+    if license_root.exists():
+        for path in license_root.iterdir():
+            if path.is_dir() and path.name not in expected_licenses:
+                shutil.rmtree(path)
 
     manifest = {
         "name": "quanttrio-llmbench-data-all",

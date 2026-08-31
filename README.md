@@ -143,7 +143,7 @@ fast regression use rather than claiming a full official benchmark score.
 \* Report counts are a 2026-08-28 snapshot used only to prioritize broadly reported datasets.
 They do not imply that this tool reproduces every result listed by DataLearner.
 
-`llmbench list-benchmarks` exposes the complete 157-entry, 23-category DataLearner snapshot.
+`llmbench list-benchmarks` exposes the curated 155-entry, 22-category DataLearner snapshot.
 Use `--category`, `--top`, or `--bundled-only` to inspect the selection. Benchmarks requiring
 a code sandbox, browser/tools, a multimodal pipeline, private data, human preference votes, or
 a separate judge model remain catalogued but are not presented as supported scores.
@@ -153,16 +153,16 @@ C-Eval data is CC BY-NC-SA 4.0 and is restricted to non-commercial use. See
 
 ## Full wheel, optional data wheels, and capability suites
 
-The stable executable matrix covers 21 benchmark categories. The recommended v1.0.1 full wheel
-combines the complete framework, core data, and all 13 data assets or task descriptors that can be
+The stable executable matrix covers 20 benchmark categories. The recommended v1.0.1 full wheel
+combines the complete framework, core data, and all 12 data assets or task descriptors that can be
 redistributed publicly. It is one real wheel, not a dependency-only metapackage, and provides
-`16/21` category coverage by itself. The remaining five packs must be built locally because of
+`15/20` category coverage by itself. The remaining five packs must be built locally because of
 upstream licensing or mixed assets.
 
-### Included 16-dataset representative matrix
+### Included 15-dataset representative matrix
 
-The full wheel has 16 representative datasets available immediately after installation, covering
-16 of the 21 stable capability categories. Execution still requires the target shown in the table.
+The full wheel has 15 representative datasets available immediately after installation, covering
+15 of the 20 stable capability categories. Execution still requires the target shown in the table.
 Record counts are the packaged regression set or official complete set; they are not padded when
 an official set contains fewer than 100 records.
 
@@ -178,16 +178,15 @@ an official set contains fewer than 100 records.
 | SimpleQA | 500 | chat + Judge | Judge accuracy |
 | IFBench | 200 | chat/verifier | prompt loose accuracy |
 | AIME 2025 | 30 | chat | exact match |
-| MTEB retrieval mini | 500 | embedding | recall@1 |
 | TruthfulQA | 200 | chat | accuracy |
 | GPQA Diamond | 100 | chat | accuracy |
 | AGIEval | 200 | chat | accuracy |
 | LongBench v2 | 200 | chat + Judge | accuracy |
 | DROP | 500 | chat | token F1 |
 
-These 16 representatives contain 3,452 packaged records. The full wheel also includes MMLU-Pro,
+These 15 representatives contain 2,952 packaged records. The full wheel also includes MMLU-Pro,
 GSM8K, C-Eval, HellaSwag, and MMLU-Redux as supplementary general regression datasets; those five
-do not add new categories to the `16/21` capability coverage figure.
+do not add new categories to the `15/20` capability coverage figure.
 
 ### Install the single full wheel
 
@@ -222,7 +221,7 @@ Expected final lines include version `1.0.1`, every installed pack with `status=
 
 ```text
 quanttrio-llmbench-full==1.0.1
-Coverage: 16/21 categories
+Coverage: 15/20 categories
 ```
 
 The `py3-none-any` compatibility tag means the same pure-Python wheel is used across all supported
@@ -411,7 +410,7 @@ artifact errors.
 ## Stable compatibility contract
 
 v1.0 freezes the documented CLI commands, YAML schema v2, report schema v2, comparison exit
-codes, and the 21-category capability matrix. Future 1.x releases may add optional fields and
+codes, and the 20-category capability matrix. Future 1.x releases may add optional fields and
 commands but will continue to read valid v1.0 artifacts. The v1.0.1 full wheel embeds the stable
 public data-pack contract and assets in the same installation artifact.
 

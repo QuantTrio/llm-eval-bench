@@ -1,7 +1,7 @@
 {
   "source": "https://www.datalearner.com/benchmarks",
   "snapshot_at": "2026-08-28T06:02:03.222638+00:00",
-  "count": 157,
+  "count": 155,
   "benchmarks": [
     {
       "code": "browsecomp",
@@ -1248,34 +1248,6 @@
       "paper_url": "https://arxiv.org/abs/2511.01846",
       "view_count": 1112,
       "report_count": 8
-    },
-    {
-      "code": "mteb",
-      "name": "MTEB",
-      "full_name": "Massive Text Embedding Benchmark",
-      "category": "文本向量检索",
-      "language": "中文",
-      "problem_count": 58,
-      "metric": "Accuracy",
-      "institution": "个人",
-      "dataset_url": "https://github.com/embeddings-benchmark/mteb",
-      "paper_url": "https://arxiv.org/abs/2210.07316",
-      "view_count": 3910,
-      "report_count": 5
-    },
-    {
-      "code": "context-arena",
-      "name": "Context Arena",
-      "full_name": "Context Arena",
-      "category": "文本向量检索",
-      "language": "英文",
-      "problem_count": 0,
-      "metric": "Accuracy",
-      "institution": "个人",
-      "dataset_url": "https://huggingface.co/datasets/openai/mrcr",
-      "paper_url": "https://contextarena.ai/",
-      "view_count": 886,
-      "report_count": 0
     },
     {
       "code": "gdpval-aa",

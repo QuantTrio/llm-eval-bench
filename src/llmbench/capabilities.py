@@ -92,15 +92,6 @@ BENCHMARK_CAPABILITIES = (
         8192,
     ),
     BenchmarkCapability(
-        "文本向量检索",
-        "MTEB retrieval mini",
-        "mteb-retrieval-mini",
-        "embedding",
-        "embedding",
-        500,
-        "mteb-retrieval-mini",
-    ),
-    BenchmarkCapability(
         "生产力知识",
         "GDPval gold",
         "gdpval-gold",

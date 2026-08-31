@@ -1,12 +1,12 @@
 # Internal consolidated data build input
 
-This project stages the 13 publicly redistributable benchmark assets used to build
+This project stages the 12 publicly redistributable benchmark assets used to build
 `quanttrio-llmbench-full`. It is maintained as an internal build input and is not published as a
 separate Release artifact.
 
 The staging package provides AGIEval, Aider Polyglot, AIME 2025, BrowseComp, HumanEval, IFBench,
-LongBench v2, MMMU, MTEB retrieval mini, PinchBench, SimpleBench, SimpleQA, and Terminal-Bench 2.0.
-Together with the three representative datasets in the core wheel, coverage is `16/21`.
+LongBench v2, MMMU, PinchBench, SimpleBench, SimpleQA, and Terminal-Bench 2.0. Together with the
+three representative datasets in the core wheel, coverage is `15/20`.
 
 Maintainers rebuild the staging package after generating each source pack:
 

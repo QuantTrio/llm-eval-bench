@@ -1,7 +1,7 @@
 # Stable representative benchmark matrix
 
-The stable suite supports 21 DataLearner categories. HLE (`综合评估`) and Fiction.liveBench
-(`长上下文`) remain visible in the immutable 157-entry catalog snapshot but are intentionally not
+The stable suite supports 20 DataLearner categories. HLE (`综合评估`) and Fiction.liveBench
+(`长上下文`) remain visible in the curated 155-entry catalog snapshot but are intentionally not
 part of the executable/stable coverage contract.
 
 | Category | Representative | Delivery | Capability |
@@ -18,7 +18,6 @@ part of the executable/stable coverage contract.
 | 常识问答 | SimpleQA | wheel | chat + Judge |
 | 指令跟随 | IFBench | wheel | official verifier |
 | 数学推理 | AIME 2025 | wheel | chat |
-| 文本向量检索 | MTEB ArguAna mini | wheel | embedding |
 | 生产力知识 | GDPval gold | local-build descriptor | agent + Judge |
 | 真实性评估 | TruthfulQA | core | chat |
 | 科学与综合推理 | GPQA Diamond | core | chat |

@@ -42,6 +42,11 @@ def main() -> None:
         if not path.exists():
             raise FileNotFoundError(f"aggregate data asset is missing: {name}: {path}")
 
+    if PACKAGES.exists():
+        shutil.rmtree(PACKAGES)
+    build_directory = BUNDLE / "build"
+    if build_directory.exists():
+        shutil.rmtree(build_directory)
     PACKAGES.mkdir(parents=True, exist_ok=True)
     core_files, core_bytes = _copy_package(core_source, PACKAGES / "llmbench")
     data_files, data_bytes = _copy_package(data_source, PACKAGES / "llmbench_data_all")

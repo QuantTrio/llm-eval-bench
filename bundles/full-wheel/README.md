@@ -4,7 +4,7 @@ This bundle produces one standards-compliant pure-Python wheel containing:
 
 - the complete `quanttrio-llmbench` 1.0.1 framework and `llmbench` CLI;
 - all core datasets and JSON schemas;
-- all 13 publicly redistributable v0.5.0 data packs;
+- all 12 publicly redistributable data packs;
 - the aggregate data entry point, source revisions, SHA256 metadata, and license notices.
 
 The wheel tag is `py3-none-any`, which is the Python packaging standard for a pure-Python wheel

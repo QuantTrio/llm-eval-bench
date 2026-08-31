@@ -23,8 +23,8 @@ def main() -> None:
             suffix = f"llmbench/data/{metadata['file']}"
             assert any(name.endswith(suffix) for name in names), suffix
         assert len(manifest) == 9
-        assert catalog["count"] == 157
-    print(f"Verified {args.wheel}: 9 bundled resources, 157 catalog entries")
+        assert catalog["count"] == 155
+    print(f"Verified {args.wheel}: 9 bundled resources, 155 catalog entries")
 
 
 if __name__ == "__main__":
