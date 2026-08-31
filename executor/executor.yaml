@@ -10,7 +10,7 @@ executor:
     - .wikipedia.org
     - .github.com
   allowed_images:
-    - quanttrio/llmbench-sandbox:0.4.0
+    - quanttrio/llmbench-sandbox:0.6.0
   cpus: 1.0
   memory: 2g
   pids_limit: 128

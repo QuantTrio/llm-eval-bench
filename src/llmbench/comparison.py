@@ -167,6 +167,8 @@ def compare_run_directories(
                 "transition": transition,
                 "baseline_answer": base.parsed_answer,
                 "candidate_answer": cand.parsed_answer,
+                "baseline_raw_output": base.raw_output,
+                "candidate_raw_output": cand.raw_output,
                 "gold_answer": base.gold_answer,
             }
         )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,103 @@ def _fmt(value: Any, *, percent: bool = False) -> str:
     if isinstance(value, float):
         return f"{value * 100:.2f}%" if percent else f"{value:.2f}"
     return str(value)
+
+
+def _radar_chart(categories: dict[str, Any]) -> str:
+    values = [
+        (name, float(payload.get("macro_mean_score") or 0.0))
+        for name, payload in categories.items()
+    ]
+    if not values:
+        return "<p class='muted'>No scored categories.</p>"
+    center_x, center_y, radius = 210.0, 170.0, 112.0
+    count = len(values)
+
+    def point(index: int, scale: float) -> tuple[float, float]:
+        angle = -math.pi / 2 + (2 * math.pi * index / count)
+        return (
+            center_x + radius * scale * math.cos(angle),
+            center_y + radius * scale * math.sin(angle),
+        )
+
+    rings = []
+    for scale in (0.25, 0.5, 0.75, 1.0):
+        ring_points = " ".join(
+            f"{x:.1f},{y:.1f}" for x, y in (point(i, scale) for i in range(count))
+        )
+        rings.append(f"<polygon points='{ring_points}' class='radar-grid'/>")
+    axes = []
+    labels = []
+    for index, (name, _score) in enumerate(values):
+        x, y = point(index, 1.0)
+        label_x, label_y = point(index, 1.24)
+        anchor = "middle"
+        if label_x < center_x - 8:
+            anchor = "end"
+        elif label_x > center_x + 8:
+            anchor = "start"
+        axes.append(f"<line x1='{center_x}' y1='{center_y}' x2='{x:.1f}' y2='{y:.1f}'/>")
+        labels.append(
+            f"<text x='{label_x:.1f}' y='{label_y:.1f}' text-anchor='{anchor}'>"
+            f"{html.escape(name)}</text>"
+        )
+    score_points = " ".join(
+        f"{x:.1f},{y:.1f}"
+        for x, y in (
+            point(index, max(0.0, min(1.0, score))) for index, (_name, score) in enumerate(values)
+        )
+    )
+    return (
+        "<div class='chart-scroll'><svg class='radar' viewBox='0 0 420 340' role='img' "
+        "aria-label='Category score radar'>"
+        + "".join(rings)
+        + "<g class='radar-axis'>"
+        + "".join(axes)
+        + "</g><polygon class='radar-score' points='"
+        + score_points
+        + "'/><g class='radar-label'>"
+        + "".join(labels)
+        + "</g></svg></div>"
+    )
+
+
+def _line_chart(samples: list[tuple[str, float]], *, title: str, color: str) -> str:
+    if not samples:
+        return "<p class='muted'>No data.</p>"
+    width, height = 720.0, 260.0
+    left, right, top, bottom = 58.0, 20.0, 28.0, 45.0
+    plot_width = width - left - right
+    plot_height = height - top - bottom
+    maximum = max(value for _label, value in samples) or 1.0
+    denominator = max(1, len(samples) - 1)
+    points: list[tuple[float, float]] = []
+    labels = []
+    for index, (label, value) in enumerate(samples):
+        x = left + plot_width * index / denominator
+        y = top + plot_height * (1 - value / maximum)
+        points.append((x, y))
+        labels.append(
+            f"<text x='{x:.1f}' y='{height - 16:.1f}' text-anchor='middle'>"
+            f"{html.escape(label)}</text>"
+        )
+    polyline = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
+    circles = "".join(
+        f"<circle cx='{x:.1f}' cy='{y:.1f}' r='4'><title>{value:.2f}</title></circle>"
+        for (x, y), (_label, value) in zip(points, samples, strict=True)
+    )
+    return (
+        f"<div class='line-chart'><h3>{html.escape(title)}</h3>"
+        f"<svg viewBox='0 0 {width:.0f} {height:.0f}' role='img' "
+        f"aria-label='{html.escape(title)}'>"
+        f"<line class='chart-axis' x1='{left}' y1='{top}' x2='{left}' "
+        f"y2='{top + plot_height}'/>"
+        f"<line class='chart-axis' x1='{left}' y1='{top + plot_height}' "
+        f"x2='{left + plot_width}' y2='{top + plot_height}'/>"
+        f"<text x='8' y='{top + 6:.1f}'>max {maximum:.2f}</text>"
+        f"<polyline points='{polyline}' style='stroke:{color}'/>"
+        f"<g style='fill:{color}'>{circles}</g><g class='chart-label'>{''.join(labels)}</g>"
+        "</svg></div>"
+    )
 
 
 def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Report") -> str:
@@ -150,6 +248,7 @@ def html_report(
         f"<strong>{html.escape(value)}</strong></div>"
         for label, value in cards
     )
+    radar_html = _radar_chart(quality.get("by_category", {}))
     dataset_rows = []
     for dataset, values in quality.get("by_dataset", {}).items():
         score = values.get("score", values.get("mean_score"))
@@ -192,8 +291,14 @@ table{{width:100%;border-collapse:collapse;margin:18px 0}}
 th,td{{padding:8px;border-bottom:1px solid #25314d;text-align:left}}
 .bar{{height:12px;background:var(--accent);border-radius:6px;min-width:2px}}
 details pre{{max-height:260px}}
+.muted{{color:var(--muted)}} .chart-scroll{{overflow-x:auto}}
+.radar{{width:100%;min-width:420px;max-height:420px}}
+.radar-grid{{fill:none;stroke:#25314d;stroke-width:1}}
+.radar-axis line{{stroke:#25314d}} .radar-label{{fill:var(--muted);font-size:10px}}
+.radar-score{{fill:#65d6c455;stroke:var(--accent);stroke-width:2}}
 a{{color:var(--accent)}}
 </style></head><body><main><h1>{html.escape(title)}</h1><div class="cards">{card_html}</div>
+<h2>Category radar</h2>{radar_html}
 <h2>Dataset scores</h2><table><thead><tr><th>Dataset</th><th>Metric</th>
 <th>Score</th><th>Bar</th><th>Truncated</th><th>Valid</th></tr></thead>
 <tbody>{"".join(dataset_rows)}</tbody></table>
@@ -406,8 +511,16 @@ def write_comparison(output: Path, comparison: dict[str, Any]) -> dict[str, Path
         f"<td>{html.escape(str(row['transition']))}</td>"
         f"<td>{_fmt(row.get('baseline_score'), percent=True)}</td>"
         f"<td>{_fmt(row.get('candidate_score'), percent=True)}</td>"
-        f"<td>{html.escape(str(row.get('baseline_answer')))}</td>"
-        f"<td>{html.escape(str(row.get('candidate_answer')))}</td>"
+        "<td><details><summary>baseline</summary>"
+        f"<strong>Parsed</strong><pre>{html.escape(str(row.get('baseline_answer')))}</pre>"
+        "<strong>Raw output</strong><pre>"
+        f"{html.escape(str(row.get('baseline_raw_output', '')))}</pre>"
+        "</details></td>"
+        "<td><details><summary>candidate</summary>"
+        f"<strong>Parsed</strong><pre>{html.escape(str(row.get('candidate_answer')))}</pre>"
+        "<strong>Raw output</strong><pre>"
+        f"{html.escape(str(row.get('candidate_raw_output', '')))}</pre>"
+        "</details></td>"
         "</tr>"
         for row in comparison.get("paired_results", [])
     )
@@ -422,7 +535,7 @@ th,td{{padding:7px;border-bottom:1px solid #25314d;text-align:left}}</style></he
 <h1>Quantization Regression Report</h1>
 <div class="cards">{cards}</div><h2>Paired question changes</h2>
 <table><thead><tr><th>Dataset</th><th>Question</th><th>Transition</th><th>Baseline</th>
-<th>Candidate</th><th>Baseline answer</th><th>Candidate answer</th></tr></thead>
+<th>Candidate</th><th>Baseline output</th><th>Candidate output</th></tr></thead>
 <tbody>{paired_rows}</tbody></table><pre>{html.escape(markdown)}</pre></body></html>"""
     html_path.write_text(html_document, encoding="utf-8")
     paths = {"json": json_path, "markdown": md_path, "html": html_path}
@@ -458,10 +571,37 @@ def write_sweep_artifacts(output_dir: Path, payload: dict[str, Any]) -> dict[str
         )
     markdown = "\n".join(lines) + "\n"
     markdown_path.write_text(markdown, encoding="utf-8")
+    qps_chart = _line_chart(
+        [
+            (str(point["concurrency"]), float(point["summary"]["performance"]["qps"]))
+            for point in payload["points"]
+        ],
+        title="QPS by concurrency",
+        color="#159d86",
+    )
+    latency_chart = _line_chart(
+        [
+            (
+                str(point["concurrency"]),
+                float(point["summary"]["performance"]["latency_ms"].get("p95") or 0),
+            )
+            for point in payload["points"]
+        ],
+        title="p95 latency (ms) by concurrency",
+        color="#df6c5b",
+    )
     html_path.write_text(
         "<!doctype html><html><head><meta charset='utf-8'><title>Concurrency Sweep</title>"
         "<style>body{font:15px/1.5 system-ui;max-width:1000px;margin:40px auto;padding:0 20px}"
-        "pre{white-space:pre-wrap}</style></head><body><pre>"
+        "pre{white-space:pre-wrap}.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px}"
+        ".line-chart{border:1px solid #ddd;border-radius:12px;padding:12px}"
+        ".line-chart svg{width:100%;min-width:360px}.line-chart polyline{fill:none;stroke-width:3}"
+        ".chart-axis{stroke:#777}.chart-label{font-size:11px;fill:#555}"
+        "@media(max-width:800px){.charts{grid-template-columns:1fr;overflow-x:auto}}</style>"
+        "</head><body><h1>Concurrency Sweep</h1><div class='charts'>"
+        + qps_chart
+        + latency_chart
+        + "</div><pre>"
         + html.escape(markdown)
         + "</pre></body></html>",
         encoding="utf-8",

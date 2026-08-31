@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 - 2026-08-31
+
+- Add self-contained category radar, dataset bars, question drilldown, and sweep curves.
+- Add paired baseline/candidate raw-output drilldown to quantization comparison reports.
+- Add JSON Schema v2 validation for run summaries, manifests, and raw JSONL records.
+- Use collision-resistant UTC-plus-UUID run IDs while retaining read compatibility for v1 reports.
+- Test Python 3.10, 3.11, and 3.12 and publish build artifacts with CycloneDX SBOM metadata.
+- Document migration from v0.1.x commands, metrics, artifacts, and configuration.
+
 ## 0.5.0 - 2026-08-31
 
 - Add capability-specific suite routing for chat, multimodal, embedding, Judge, and executor tasks.

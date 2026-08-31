@@ -10,7 +10,7 @@ raw responses plus JSON, Markdown, and HTML reports.
 Install the tagged release in one command:
 
 ```bash
-python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.5.0/quanttrio_llmbench-0.5.0-py3-none-any.whl"
+python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.6.0/quanttrio_llmbench-0.6.0-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:
@@ -185,10 +185,18 @@ report.md
 report.html
 ```
 
+Validate the machine-readable artifacts before archiving or comparing a run:
+
+```bash
+llmbench validate runs/candidate-model
+```
+
 Quality is reported separately by dataset, benchmark category, and question type. Performance
 includes QPS, successful QPS, input/output tokens per second, latency p50/p90/p95/p99,
 TTFT/TPOT distributions, timeout/error rates, retry attempts, and truncated responses. API keys
-are never written to reports.
+are never written to reports. The self-contained HTML report includes a category radar, dataset
+bars, and question-level prompt/output/parse details. Sweep reports include offline QPS and p95
+latency curves; comparison reports expose paired baseline and candidate raw outputs.
 
 ### Expected result
 
@@ -267,7 +275,7 @@ Validate a deployment with an ephemeral task key:
 ```bash
 export EXECUTOR_URL=https://executor.example.com
 export EXECUTOR_TASK_KEY=short-lived-secret
-llmbench executor smoke --image quanttrio/llmbench-sandbox:0.4.0
+llmbench executor smoke --image quanttrio/llmbench-sandbox:0.6.0
 ```
 
 Executor jobs run in allowlisted, read-only remote containers with CPU, memory, PID, output, and
@@ -303,5 +311,8 @@ python3.12 -m venv .venv
 
 Dataset regeneration is maintainer-only and requires `.[data]`. Runtime users never need
 `pyarrow` or network access.
+
+See [docs/MIGRATION.md](docs/MIGRATION.md) when moving an existing run or CI pipeline from a
+v0.1.x release.
 
 The code is Apache-2.0. Bundled benchmark data retains its upstream license.
