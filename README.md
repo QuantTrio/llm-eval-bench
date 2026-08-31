@@ -10,7 +10,7 @@ raw responses plus JSON, Markdown, and HTML reports.
 Install the tagged release in one command:
 
 ```bash
-python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.6.0/quanttrio_llmbench-0.6.0-py3-none-any.whl"
+python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.0/quanttrio_llmbench-1.0.0-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:
@@ -261,6 +261,15 @@ transitions, and deterministic 95% bootstrap confidence intervals. Exit codes ar
 `2` for a regression-policy failure, `3` for incomparable runs, and `4` for infrastructure or
 artifact errors.
 
+## Stable compatibility contract
+
+v1.0 freezes the documented CLI commands, YAML schema v2, report schema v2, comparison exit
+codes, and the 21-category capability matrix. Future 1.x releases may add optional fields and
+commands but will continue to read valid v1.0 artifacts. Data wheels are versioned independently;
+the v0.5.0 wheels published with the benchmark matrix remain compatible with core v1.0.0.
+
+See [docs/STABLE_API.md](docs/STABLE_API.md) for the complete stability and deprecation policy.
+
 ## Remote executor
 
 Install the service dependencies and start the API:
@@ -275,7 +284,7 @@ Validate a deployment with an ephemeral task key:
 ```bash
 export EXECUTOR_URL=https://executor.example.com
 export EXECUTOR_TASK_KEY=short-lived-secret
-llmbench executor smoke --image quanttrio/llmbench-sandbox:0.6.0
+llmbench executor smoke --image quanttrio/llmbench-sandbox:1.0.0
 ```
 
 Executor jobs run in allowlisted, read-only remote containers with CPU, memory, PID, output, and

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 - 2026-08-31
+
+- Freeze the public CLI, YAML schema v2, report schema v2, and regression exit-code contract.
+- Declare the 21-category representative benchmark matrix stable; unsupported targets stay unscored.
+- Freeze data-wheel discovery and integrity metadata while retaining v0.5.0 wheel compatibility.
+- Publish migration and stable-interface documentation for v0.1.1 through v1.0.0.
+- Promote package metadata to Production/Stable after the full quality, resume, comparison, report,
+  capability-routing, and executor contract test suite passed.
+
 ## 0.6.0 - 2026-08-31
 
 - Add self-contained category radar, dataset bars, question drilldown, and sweep curves.
