@@ -84,6 +84,10 @@ def test_category_type_and_dataset_breakdowns(tmp_path) -> None:
     assert all(path.exists() for path in paths.values())
     assert "Category breakdown" in paths["markdown"].read_text(encoding="utf-8")
     assert len(paths["raw"].read_text(encoding="utf-8").splitlines()) == 3
+    html = paths["html"].read_text(encoding="utf-8")
+    assert "Dataset scores" in html
+    assert "Question details" in html
+    assert "prompt" in html
 
 
 def test_standard_pass_at_k_only_for_repeated_binary_samples() -> None:

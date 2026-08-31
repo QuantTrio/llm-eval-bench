@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "quanttrio-llmbench-data-hle"
+version = "0.5.0"
+description = "Local-build HLE regression pack for QuantTrio llmbench"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "QuantTrio" }]
+[project.entry-points."llmbench.data_packs"]
+hle = "llmbench_data_hle:manifest"
+[tool.setuptools.package-data]
+llmbench_data_hle = ["*.json", "*.jsonl", "NOTICE"]

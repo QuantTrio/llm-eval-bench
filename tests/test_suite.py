@@ -138,6 +138,20 @@ async def test_capability_runner_routes_all_core_adapters(tmp_path) -> None:
                 },
             ),
             DatasetItem(
+                id="hle",
+                dataset="hle",
+                type="judge",
+                question="Answer the multimodal question",
+                answer="reference",
+                metadata={
+                    "capability": "multimodal",
+                    "adapter": "multimodal_judge",
+                    "assets": [str(image)],
+                    "rubric": "correctness",
+                    "benchmark_metric": "judge_accuracy",
+                },
+            ),
+            DatasetItem(
                 id="bad-mm",
                 dataset="mmmu",
                 type="multiple_choice",
@@ -210,9 +224,9 @@ async def test_capability_runner_routes_all_core_adapters(tmp_path) -> None:
             ),
         ]
         results, _ = await runner.evaluate(items)
-    assert [result.score for result in results] == [1.0, 1.0, None, None, 1.0, 1.0, 1.0, 1.0]
-    assert results[2].error_type == "multimodal_asset_error"
-    assert results[3].error_type == "embedding_item_error"
+    assert [result.score for result in results] == [1.0, 1.0, 1.0, None, None, 1.0, 1.0, 1.0, 1.0]
+    assert results[3].error_type == "multimodal_asset_error"
+    assert results[4].error_type == "embedding_item_error"
 
 
 @pytest.mark.asyncio

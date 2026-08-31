@@ -24,6 +24,8 @@ def _asset_bytes(item: DatasetItem, asset: str) -> bytes:
 
 
 def asset_data_url(item: DatasetItem, asset: str) -> str:
+    if asset.startswith("data:"):
+        return asset
     mime = mimetypes.guess_type(asset)[0] or "application/octet-stream"
     encoded = base64.b64encode(_asset_bytes(item, asset)).decode("ascii")
     return f"data:{mime};base64,{encoded}"

@@ -51,6 +51,8 @@ class CapabilityRunner(BenchmarkRunner):
         adapter = str(item.metadata.get("adapter") or "native")
         if capability == "chat" and adapter == "native":
             return await super()._one(item, sample_id)
+        if adapter == "multimodal_judge":
+            return await self._multimodal_judged(item, sample_id)
         if capability == "multimodal" or adapter == "multimodal_chat":
             return await self._multimodal(item, sample_id)
         if capability == "embedding" or adapter == "embedding":
@@ -139,6 +141,69 @@ class CapabilityRunner(BenchmarkRunner):
             input_tokens=int(details.get("input_tokens") or 0),
             error=details.get("error"),
             error_type=details.get("error_type"),
+        )
+
+    async def _multimodal_judged(
+        self, item: DatasetItem, sample_id: int
+    ) -> RequestResult:
+        if (
+            self.multimodal_client is None
+            or self.multimodal_model is None
+            or self.judge_client is None
+            or self.judge_model is None
+        ):
+            return self._unsupported(item, sample_id, "multimodal/judge")
+        started = time.perf_counter()
+        try:
+            messages = multimodal_messages(item)
+        except (OSError, ValueError) as exc:
+            return self._result(
+                item,
+                sample_id,
+                model=self.multimodal_model,
+                error=str(exc),
+                error_type="multimodal_asset_error",
+            )
+        completion = await self.multimodal_client.complete(
+            model=self.multimodal_model,
+            messages=messages,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            max_tokens=self._max_tokens(item),
+            stream=self.stream,
+            seed=self.seed + sample_id - 1,
+        )
+        if completion.error:
+            return self._result(
+                item,
+                sample_id,
+                model=self.multimodal_model,
+                error=completion.error,
+                error_type=completion.error_type,
+                attempts=completion.attempts,
+            )
+        judged = await judge_response(
+            self.judge_client,
+            model=self.judge_model,
+            item=item,
+            candidate_output=completion.content,
+            repeats=self.judge_repeats,
+        )
+        return self._result(
+            item,
+            sample_id,
+            model=self.multimodal_model,
+            raw_output=completion.content,
+            parsed_answer=None if judged.score is None else str(judged.score),
+            score=judged.score,
+            parse_failed=judged.score is None,
+            latency_ms=(time.perf_counter() - started) * 1000,
+            input_tokens=completion.input_tokens,
+            output_tokens=completion.output_tokens,
+            finish_reason=completion.finish_reason,
+            error="; ".join(judged.errors) if judged.score is None else None,
+            error_type="judge_error" if judged.score is None else None,
+            attempts=completion.attempts,
         )
 
     async def _judged(self, item: DatasetItem, sample_id: int) -> RequestResult:

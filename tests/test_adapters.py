@@ -34,6 +34,7 @@ def test_multimodal_assets_and_humaneval_payload(tmp_path) -> None:
         metadata={"assets": [str(image)]},
     )
     assert asset_data_url(item, str(image)).startswith("data:image/png;base64,")
+    assert asset_data_url(item, "data:image/png;base64,cG5n") == "data:image/png;base64,cG5n"
     messages = multimodal_messages(item)
     assert messages[0]["content"][1]["type"] == "image_url"
 

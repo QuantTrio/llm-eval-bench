@@ -136,3 +136,4 @@ def test_cli_policy_failure_is_exit_two(tmp_path) -> None:
     )
     assert result.exit_code == 2, result.exception
     assert (tmp_path / "paired_results.jsonl").exists()
+    assert "Paired question changes" in (tmp_path / "comparison.html").read_text()
