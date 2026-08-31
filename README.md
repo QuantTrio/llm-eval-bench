@@ -149,27 +149,137 @@ C-Eval data is CC BY-NC-SA 4.0 and is restricted to non-commercial use. See
 
 ## Optional data wheels and capability suites
 
-The stable executable matrix covers 21 benchmark categories. Install only the data wheels needed
-for a run, then verify them locally:
+The stable executable matrix covers 21 benchmark categories. The v0.5.0 Release contains all 13
+data wheels that can be redistributed publicly. Together with the three core representatives in
+v1.0.1, installing every public wheel provides `16/21` category coverage. The remaining five
+packs must be built locally because of upstream licensing or mixed assets.
+
+### Install v1.0.1 and every public v0.5.0 data wheel
+
+The following downloads the official Release assets and installs the core plus all public data
+wheels in one `pip install` invocation. The compressed wheels require about 250 MB; allow at least
+1 GB for the virtual environment and extracted datasets. This method requires the
+[GitHub CLI](https://cli.github.com/).
 
 ```bash
-python -m pip install ./quanttrio_llmbench_data_humaneval-0.5.0-py3-none-any.whl
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+
+mkdir -p llmbench-wheels/core llmbench-wheels/data
+
+gh release download v1.0.1 \
+  --repo QuantTrio/llm-eval-bench \
+  --pattern 'quanttrio_llmbench-1.0.1-py3-none-any.whl' \
+  --dir llmbench-wheels/core \
+  --clobber
+
+gh release download v0.5.0 \
+  --repo QuantTrio/llm-eval-bench \
+  --pattern 'quanttrio_llmbench_data_*.whl' \
+  --dir llmbench-wheels/data \
+  --clobber
+
+python -m pip install \
+  llmbench-wheels/core/quanttrio_llmbench-1.0.1-py3-none-any.whl \
+  llmbench-wheels/data/*.whl
+
+python -c 'import llmbench; print(llmbench.__version__)'
 llmbench data list
 llmbench data verify
 llmbench coverage
 ```
 
-Run installed representatives through capability-specific targets:
+Expected final lines include version `1.0.1`, every installed pack with `status=ok`, and:
+
+```text
+Coverage: 16/21 categories
+```
+
+The five local-build-only packs are Creative Writing v3, MMEB-v2 Image, GDPval Gold,
+LiveCodeBench, and SuperGLUE. Their pinned builders are under `data-packs/` in the source archive.
+After reviewing their upstream terms and obtaining any required source access, build and install
+those wheels to reach `21/21`. See [data-packs/README.md](data-packs/README.md).
+
+### Configure and start evaluation
+
+Create `bench.yaml`. This minimal configuration runs chat and multimodal-compatible datasets
+through one OpenAI-compatible model and uses the same endpoint as a smoke-test Judge. For a formal
+comparison, use a separate Judge endpoint. Remove the `multimodal` block if the model does not
+support OpenAI content parts.
+
+```yaml
+schema_version: 2
+
+targets:
+  chat:
+    base_url: http://YOUR_LLM_HOST:PORT/v1
+    model: your-model-id
+    api_key_env: CHAT_API_KEY
+  multimodal:
+    base_url: http://YOUR_LLM_HOST:PORT/v1
+    model: your-model-id
+    api_key_env: MULTIMODAL_API_KEY
+
+judge:
+  base_url: http://YOUR_LLM_HOST:PORT/v1
+  model: your-model-id
+  api_key_env: JUDGE_API_KEY
+  repeats: 3
+
+run:
+  concurrency: 16
+  temperature: 0
+  top_p: 1
+  max_tokens: 8192
+  timeout: 300
+  retries: 2
+  retry_backoff: 2
+  seed: 42
+  stream: true
+  checkpoint_every: 1
+  progress_interval: 5
+```
+
+Export the keys. Use `EMPTY` for an endpoint that does not require authentication:
 
 ```bash
-llmbench suite --config examples/bench.yaml --limit 100 --output-dir runs/full-suite
+export CHAT_API_KEY=EMPTY
+export MULTIMODAL_API_KEY=EMPTY
+export JUDGE_API_KEY=EMPTY
 ```
+
+First run a five-record-per-dataset smoke suite:
+
+```bash
+llmbench suite \
+  --config bench.yaml \
+  --limit 5 \
+  --output-dir runs/suite-smoke \
+  2>&1 | tee suite-smoke.log
+```
+
+Then start the 100-record-per-dataset evaluation:
+
+```bash
+llmbench suite \
+  --config bench.yaml \
+  --limit 100 \
+  --output-dir runs/suite-100 \
+  2>&1 | tee suite-100.log
+```
+
+`--limit` is applied to each dataset, not to the suite as a whole. Official sets containing fewer
+records use their complete set without duplication. Progress is visible in the terminal and in
+`events.jsonl`; completed requests are appended immediately to `raw_results.jsonl`.
 
 Chat, multimodal, embedding, Judge, and remote-agent targets are configured independently. A
 missing target is reported as `unsupported_capability` and is excluded from scoring rather than
-silently counted as a wrong answer. Large or license-restricted packs are built using their pinned
-recipe under `data-packs/`; runtime remains offline after wheel installation. See
-[docs/SUPPORTED_BENCHMARKS.md](docs/SUPPORTED_BENCHMARKS.md).
+silently counted as a wrong answer. To run the embedding and agent categories, add the `embedding`
+and `agent` targets from [examples/bench.yaml](examples/bench.yaml) and deploy the remote executor
+described in [docs/EXECUTOR.md](docs/EXECUTOR.md). Runtime remains offline after wheel installation,
+except for benchmarks such as BrowseComp whose task definition requires controlled internet access.
+See [docs/SUPPORTED_BENCHMARKS.md](docs/SUPPORTED_BENCHMARKS.md).
 
 ## Reports
 
