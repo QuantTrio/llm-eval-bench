@@ -166,24 +166,24 @@ The full wheel has 16 representative datasets available immediately after instal
 Record counts are the packaged regression set or official complete set; they are not padded when
 an official set contains fewer than 100 records.
 
-| Category | Representative dataset | ID | Records | Required target | Native metric |
-|---|---|---|---:|---|---|
-| AI Agent - 信息收集 | BrowseComp | `browsecomp` | 100 | agent/browser | Judge accuracy |
-| AI Agent - 工具使用 | Terminal-Bench 2.0 | `terminal-bench-2` | 89 | agent/executor | success rate |
-| Agent 能力评测 | Aider Polyglot | `aider-polyglot` | 200 | agent/executor | pass rate@1 |
-| OpenClaw 综合能力 | PinchBench | `pinchbench` | 23 | agent/executor | success rate |
-| 代码能力 | HumanEval | `humaneval` | 100 | agent/executor | pass@1 |
-| 多模态理解 | MMMU | `mmmu` | 500 | multimodal | accuracy |
-| 常识推理 | SimpleBench | `simple-bench` | 10 | chat | accuracy |
-| 常识问答 | SimpleQA | `simpleqa` | 500 | chat + Judge | Judge accuracy |
-| 指令跟随 | IFBench | `ifbench` | 200 | chat/verifier | prompt loose accuracy |
-| 数学推理 | AIME 2025 | `aime-2025` | 30 | chat | exact match |
-| 文本向量检索 | MTEB retrieval mini | `mteb-retrieval-mini` | 500 | embedding | recall@1 |
-| 真实性评估 | TruthfulQA | `truthfulqa` | 200 | chat | accuracy |
-| 科学与综合推理 | GPQA Diamond | `gpqa-diamond` | 100 | chat | accuracy |
-| 综合能力 | AGIEval | `agieval` | 200 | chat | accuracy |
-| 长上下文能力 | LongBench v2 | `longbench-v2` | 200 | chat + Judge | accuracy |
-| 阅读理解 | DROP | `drop` | 500 | chat | token F1 |
+| Representative dataset | Records | Required target | Native metric |
+|---|---:|---|---|
+| BrowseComp | 100 | agent/browser | Judge accuracy |
+| Terminal-Bench 2.0 | 89 | agent/executor | success rate |
+| Aider Polyglot | 200 | agent/executor | pass rate@1 |
+| PinchBench | 23 | agent/executor | success rate |
+| HumanEval | 100 | agent/executor | pass@1 |
+| MMMU | 500 | multimodal | accuracy |
+| SimpleBench | 10 | chat | accuracy |
+| SimpleQA | 500 | chat + Judge | Judge accuracy |
+| IFBench | 200 | chat/verifier | prompt loose accuracy |
+| AIME 2025 | 30 | chat | exact match |
+| MTEB retrieval mini | 500 | embedding | recall@1 |
+| TruthfulQA | 200 | chat | accuracy |
+| GPQA Diamond | 100 | chat | accuracy |
+| AGIEval | 200 | chat | accuracy |
+| LongBench v2 | 200 | chat + Judge | accuracy |
+| DROP | 500 | chat | token F1 |
 
 These 16 representatives contain 3,452 packaged records. The full wheel also includes MMLU-Pro,
 GSM8K, C-Eval, HellaSwag, and MMLU-Redux as supplementary general regression datasets; those five
