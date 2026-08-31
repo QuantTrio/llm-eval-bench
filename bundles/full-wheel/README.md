@@ -20,6 +20,5 @@ python bundles/full-wheel/build_bundle.py
 python -m build --wheel bundles/full-wheel
 ```
 
-Install this wheel into a clean environment. Do not install it alongside `quanttrio-llmbench`,
-`quanttrio-llmbench-data-all`, or the individual data wheels because those distributions own the
-same import packages or dataset IDs.
+Install the full wheel into a clean environment. The projects under `data-packs/` are internal
+build inputs rather than separate public Release artifacts.

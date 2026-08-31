@@ -4,8 +4,6 @@
 
 - Catch the Python 3.10-specific `asyncio.TimeoutError` in the executor timeout path while
   preserving the stable public `TimeoutError` contract.
-- Add one consolidated v0.5.0 wheel containing all 13 publicly redistributable data packs,
-  integrity metadata, source revisions, and license notices.
 - Add one v1.0.1 full wheel containing the framework, CLI, core assets, and consolidated public
   data using the standards-compliant cross-platform `py3-none-any` tag.
 

@@ -232,12 +232,11 @@ runtime syntax baseline; it does not require a CPython-version-specific or platf
 The five local-build-only packs are Creative Writing v3, MMEB-v2 Image, GDPval Gold,
 LiveCodeBench, and SuperGLUE. Their pinned builders are under `data-packs/` in the source archive.
 After reviewing their upstream terms and obtaining any required source access, build and install
-those wheels to reach `21/21`. See [data-packs/README.md](data-packs/README.md).
+those local-only packs to reach `21/21`. Each restricted pack contains its own README with source,
+license, and preparation requirements.
 
-The standalone data-wheel projects remain in the source tree for maintainers and selective local
-builds, but the supported public installation is the v1.0.1 full wheel. Do not install locally
-built standalone wheels alongside `quanttrio-llmbench-full`, because the distributions
-intentionally provide the same dataset IDs.
+The supported public installation is only the v1.0.1 full wheel. The projects under `data-packs/`
+are maintainer build inputs and are not separate public Release artifacts.
 
 ### Configure and start evaluation
 
