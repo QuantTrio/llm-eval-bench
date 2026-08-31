@@ -6,7 +6,7 @@ falls back to executing generated code on the machine running `llmbench`.
 Build the sandbox and service images:
 
 ```bash
-docker build -f executor/sandbox.Dockerfile -t quanttrio/llmbench-sandbox:1.0.0 .
+docker build -f executor/sandbox.Dockerfile -t ghcr.io/quanttrio/llmbench-sandbox:1.0.1 .
 docker compose -f executor/docker-compose.yml build
 ```
 
@@ -23,7 +23,7 @@ A job request contains an ephemeral key and an allowlisted image:
 ```json
 {
   "ephemeral_key": "short-lived-secret",
-  "image": "quanttrio/llmbench-sandbox:1.0.0",
+  "image": "ghcr.io/quanttrio/llmbench-sandbox:1.0.1",
   "command": ["-c", "print('ok')"],
   "network": false
 }

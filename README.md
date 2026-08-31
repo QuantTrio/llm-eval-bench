@@ -284,7 +284,7 @@ Validate a deployment with an ephemeral task key:
 ```bash
 export EXECUTOR_URL=https://executor.example.com
 export EXECUTOR_TASK_KEY=short-lived-secret
-llmbench executor smoke --image quanttrio/llmbench-sandbox:1.0.0
+llmbench executor smoke --image ghcr.io/quanttrio/llmbench-sandbox:1.0.1
 ```
 
 Executor jobs run in allowlisted, read-only remote containers with CPU, memory, PID, output, and
