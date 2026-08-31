@@ -5,6 +5,24 @@ targets:
     base_url: http://127.0.0.1:8000/v1
     model: local-model
     api_key_env: CHAT_API_KEY
+  multimodal:
+    base_url: http://127.0.0.1:8000/v1
+    model: local-vision-model
+    api_key_env: MULTIMODAL_API_KEY
+  embedding:
+    base_url: http://127.0.0.1:8001/v1
+    model: local-embedding-model
+    api_key_env: EMBEDDING_API_KEY
+  agent:
+    executor_url: https://executor.example.com
+    ephemeral_key_env: EXECUTOR_TASK_KEY
+    image: quanttrio/llmbench-sandbox:0.5.0
+
+judge:
+  base_url: http://127.0.0.1:8002/v1
+  model: judge-model
+  api_key_env: JUDGE_API_KEY
+  repeats: 3
 
 run:
   datasets:

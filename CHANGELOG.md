@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 - 2026-08-31
+
+- Add capability-specific suite routing for chat, multimodal, embedding, Judge, and executor tasks.
+- Add entry-point discovery and integrity verification for optional benchmark data wheels.
+- Add a 21-category stable representative benchmark matrix; HLE and Fiction.liveBench remain catalog-only.
+- Add 18 reproducible data-wheel projects, including large MMMU and LongBench release assets.
+- Preserve encrypted BrowseComp records and withhold sensitive plaintext from reports.
+- Mark missing model capabilities as unsupported rather than scoring them as failures.
+
 ## 0.4.0 - 2026-08-31
 
 - Add warmup, fixed-RPS pacing, worker ramp, prompt profiles, and concurrency sweep reports.

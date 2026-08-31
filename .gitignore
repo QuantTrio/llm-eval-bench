@@ -14,7 +14,6 @@ reports/
 data-packs/longbench-v2/llmbench_data_longbench_v2/longbench-v2.jsonl
 data-packs/livecodebench/llmbench_data_livecodebench/livecodebench.jsonl
 data-packs/creative-writing-v3/llmbench_data_creative_writing_v3/creative-writing-v3.jsonl
-data-packs/hle/llmbench_data_hle/hle.jsonl
 data-packs/mmmu/llmbench_data_mmmu/mmmu.jsonl
 data-packs/superglue/llmbench_data_superglue/superglue.jsonl
 data-packs/gdpval-gold/llmbench_data_gdpval_gold/gdpval-gold.jsonl
