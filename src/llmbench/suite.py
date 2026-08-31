@@ -59,6 +59,8 @@ class CapabilityRunner(BenchmarkRunner):
             return await self._judged(item, sample_id)
         if adapter == "remote_executor" and item.dataset == "humaneval":
             return await self._humaneval(item, sample_id)
+        if adapter == "remote_browser":
+            return await self._remote_browser(item, sample_id)
         return self._unsupported(item, sample_id, f"{capability}/{adapter}")
 
     async def _multimodal(self, item: DatasetItem, sample_id: int) -> RequestResult:
@@ -241,6 +243,51 @@ class CapabilityRunner(BenchmarkRunner):
             error=error,
             error_type="executor_error" if error else None,
             attempts=completion.attempts,
+        )
+
+    async def _remote_browser(self, item: DatasetItem, sample_id: int) -> RequestResult:
+        if self.executor_client is None or self.executor_key is None or self.executor_image is None:
+            return self._unsupported(item, sample_id, "agent/remote_browser")
+        started = time.perf_counter()
+        payload = {
+            "image": self.executor_image,
+            "command": [
+                "-m",
+                "llmbench_harness.browsecomp",
+                "--problem",
+                str(item.metadata.get("encrypted_problem") or ""),
+                "--answer",
+                str(item.metadata.get("encrypted_answer") or ""),
+                "--canary",
+                str(item.metadata.get("canary") or ""),
+            ],
+            "network": True,
+        }
+        try:
+            submitted = await self.executor_client.submit(payload, ephemeral_key=self.executor_key)
+            job = await self.executor_client.wait(submitted["id"])
+            artifact = (
+                await self.executor_client.artifacts(submitted["id"])
+                if job["status"] == "completed"
+                else {}
+            )
+            score = float(artifact.get("score")) if "score" in artifact else None
+            error = None if score is not None else str(job.get("error") or "missing score")
+        except (OSError, ValueError, TimeoutError, KeyError) as exc:
+            score = None
+            error = str(exc)
+            artifact = {}
+        return self._result(
+            item,
+            sample_id,
+            model=self.model,
+            raw_output="[sensitive browser artifact withheld]",
+            parsed_answer=None,
+            score=score,
+            latency_ms=(time.perf_counter() - started) * 1000,
+            error=error,
+            error_type="browser_executor_error" if error else None,
+            attempts=1,
         )
 
     def _max_tokens(self, item: DatasetItem) -> int:

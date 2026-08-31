@@ -44,8 +44,7 @@ def main() -> None:
             }
         )
     output = "".join(
-        json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"
-        for record in records
+        json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n" for record in records
     ).encode()
     data_path = PACKAGE / "aime-2025.jsonl"
     data_path.write_bytes(output)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import math
 import mimetypes
@@ -26,6 +27,13 @@ def asset_data_url(item: DatasetItem, asset: str) -> str:
     mime = mimetypes.guess_type(asset)[0] or "application/octet-stream"
     encoded = base64.b64encode(_asset_bytes(item, asset)).decode("ascii")
     return f"data:{mime};base64,{encoded}"
+
+
+def decrypt_browsecomp(ciphertext: str, canary: str) -> str:
+    encrypted = base64.b64decode(ciphertext)
+    digest = hashlib.sha256(canary.encode()).digest()
+    key = (digest * (len(encrypted) // len(digest) + 1))[: len(encrypted)]
+    return bytes(left ^ right for left, right in zip(encrypted, key, strict=True)).decode()
 
 
 def multimodal_messages(item: DatasetItem) -> list[dict[str, Any]]:

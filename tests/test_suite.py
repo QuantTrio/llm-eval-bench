@@ -13,14 +13,17 @@ from llmbench.suite import CapabilityRunner
 class FakeExecutor:
     async def submit(self, payload, *, ephemeral_key: str):
         assert ephemeral_key == "temporary"
-        assert "check(answer)" in payload["command"][1]
+        if payload["command"][0] == "-c":
+            assert "check(answer)" in payload["command"][1]
+        else:
+            assert "llmbench_harness.browsecomp" in payload["command"]
         return {"id": "job"}
 
     async def wait(self, job_id: str):
         return {"id": job_id, "status": "completed"}
 
     async def artifacts(self, job_id: str):
-        return {"exit_code": 0, "stdout": "ok", "job_id": job_id}
+        return {"exit_code": 0, "score": 1, "stdout": "ok", "job_id": job_id}
 
 
 @pytest.mark.asyncio
@@ -179,9 +182,23 @@ async def test_capability_runner_routes_all_core_adapters(tmp_path) -> None:
                     "benchmark_metric": "pass_at_1",
                 },
             ),
+            DatasetItem(
+                id="browse",
+                dataset="browsecomp",
+                type="agent",
+                question="[encrypted]",
+                metadata={
+                    "capability": "agent",
+                    "adapter": "remote_browser",
+                    "encrypted_problem": "cipher-problem",
+                    "encrypted_answer": "cipher-answer",
+                    "canary": "canary",
+                    "benchmark_metric": "judge_accuracy",
+                },
+            ),
         ]
         results, _ = await runner.evaluate(items)
-    assert [result.score for result in results] == [1.0, 1.0, None, None, 1.0, 1.0]
+    assert [result.score for result in results] == [1.0, 1.0, None, None, 1.0, 1.0, 1.0]
     assert results[2].error_type == "multimodal_asset_error"
     assert results[3].error_type == "embedding_item_error"
 
@@ -244,6 +261,13 @@ async def test_capability_runner_marks_missing_targets_unsupported() -> None:
                 type="unknown",
                 question="unknown",
                 metadata={"capability": "other", "adapter": "other"},
+            ),
+            DatasetItem(
+                id="browse",
+                dataset="browsecomp",
+                type="agent",
+                question="encrypted",
+                metadata={"capability": "agent", "adapter": "remote_browser"},
             ),
         ]
         results, _ = await runner.evaluate(items)

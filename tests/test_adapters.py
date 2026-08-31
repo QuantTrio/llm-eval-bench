@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 
 import httpx
@@ -8,6 +10,7 @@ import pytest
 from llmbench.adapters import (
     asset_data_url,
     cosine_similarity,
+    decrypt_browsecomp,
     humaneval_executor_payload,
     judge_response,
     multimodal_messages,
@@ -60,6 +63,13 @@ def test_multimodal_assets_and_humaneval_payload(tmp_path) -> None:
     assert cosine_similarity([0, 0], [1, 1]) == 0
     assert parse_judge_score('{"score": 2}') == 1
     assert parse_judge_score("invalid") is None
+    plaintext = b"sensitive question"
+    canary = "canary"
+    digest = hashlib.sha256(canary.encode()).digest()
+    ciphertext = base64.b64encode(
+        bytes(value ^ digest[index % len(digest)] for index, value in enumerate(plaintext))
+    ).decode()
+    assert decrypt_browsecomp(ciphertext, canary) == plaintext.decode()
 
 
 @pytest.mark.asyncio

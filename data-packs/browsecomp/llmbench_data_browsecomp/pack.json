@@ -1,0 +1,22 @@
+{
+  "name": "quanttrio-llmbench-data-browsecomp",
+  "version": "0.5.0",
+  "package": "llmbench_data_browsecomp",
+  "source_revision": "652c89d0ca9df547706735883097e9537d40dc47",
+  "datasets": {
+    "browsecomp": {
+      "file": "browsecomp.jsonl",
+      "count": 100,
+      "type": "agent",
+      "category": "AI Agent - 信息收集",
+      "metric": "judge_accuracy",
+      "license": "MIT",
+      "restriction": "encrypted; do not reveal questions or answers",
+      "source": "https://openaipublic.blob.core.windows.net/simple-evals/browse_comp_test_set.csv",
+      "sha256": "ede075914aae0c374cb1ca3d7490f66b53a875187e9de52d37900ceb45e263b9",
+      "recommended_max_tokens": 8192,
+      "regression_subset": true,
+      "sensitive": true
+    }
+  }
+}

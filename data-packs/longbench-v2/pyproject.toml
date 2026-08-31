@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quanttrio-llmbench-data-longbench-v2"
+version = "0.5.0"
+description = "Pinned 200-record LongBench v2 regression data pack for QuantTrio llmbench"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "QuantTrio" }]
+
+[project.entry-points."llmbench.data_packs"]
+longbench-v2 = "llmbench_data_longbench_v2:manifest"
+
+[tool.setuptools.package-data]
+llmbench_data_longbench_v2 = ["*.json", "*.jsonl", "NOTICE"]
