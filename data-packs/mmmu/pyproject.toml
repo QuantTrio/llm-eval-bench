@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "quanttrio-llmbench-data-mmmu"
+version = "0.5.0"
+description = "Pinned 500-record MMMU multimodal regression pack for QuantTrio llmbench"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "QuantTrio" }]
+[project.entry-points."llmbench.data_packs"]
+mmmu = "llmbench_data_mmmu:manifest"
+[tool.setuptools.package-data]
+llmbench_data_mmmu = ["*.json", "*.jsonl", "NOTICE"]

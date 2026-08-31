@@ -222,9 +222,31 @@ async def test_capability_runner_routes_all_core_adapters(tmp_path) -> None:
                     "benchmark_metric": "success_rate",
                 },
             ),
+            DatasetItem(
+                id="bad-harness",
+                dataset="terminal-bench-2",
+                type="agent",
+                question="task",
+                metadata={
+                    "capability": "agent",
+                    "adapter": "official_harness",
+                    "benchmark_metric": "success_rate",
+                },
+            ),
         ]
         results, _ = await runner.evaluate(items)
-    assert [result.score for result in results] == [1.0, 1.0, 1.0, None, None, 1.0, 1.0, 1.0, 1.0]
+    assert [result.score for result in results] == [
+        1.0,
+        1.0,
+        1.0,
+        None,
+        None,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        None,
+    ]
     assert results[3].error_type == "multimodal_asset_error"
     assert results[4].error_type == "embedding_item_error"
 
@@ -266,6 +288,13 @@ async def test_capability_runner_marks_missing_targets_unsupported() -> None:
                 type="embedding",
                 question="query",
                 metadata={"capability": "embedding", "adapter": "embedding"},
+            ),
+            DatasetItem(
+                id="hle",
+                dataset="hle",
+                type="judge",
+                question="question",
+                metadata={"capability": "multimodal", "adapter": "multimodal_judge"},
             ),
             DatasetItem(
                 id="judge",

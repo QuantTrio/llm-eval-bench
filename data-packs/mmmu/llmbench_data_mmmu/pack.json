@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-mmmu",
+  "version": "0.5.0",
+  "package": "llmbench_data_mmmu",
+  "source_revision": "98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68",
+  "datasets": {
+    "mmmu": {
+      "file": "mmmu.jsonl",
+      "count": 500,
+      "type": "multiple_choice",
+      "category": "多模态理解",
+      "metric": "accuracy",
+      "license": "Apache-2.0",
+      "restriction": null,
+      "source": "https://huggingface.co/datasets/MMMU/MMMU/resolve/98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68",
+      "sha256": "391548531838785781989852f5f980e1f733f8bb35fd62c51ec493d49a9c6b1e",
+      "recommended_max_tokens": 4096,
+      "regression_subset": true
+    }
+  }
+}
