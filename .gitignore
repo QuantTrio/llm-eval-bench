@@ -16,3 +16,6 @@ data-packs/livecodebench/llmbench_data_livecodebench/livecodebench.jsonl
 data-packs/creative-writing-v3/llmbench_data_creative_writing_v3/creative-writing-v3.jsonl
 data-packs/hle/llmbench_data_hle/hle.jsonl
 data-packs/mmmu/llmbench_data_mmmu/mmmu.jsonl
+data-packs/superglue/llmbench_data_superglue/superglue.jsonl
+data-packs/gdpval-gold/llmbench_data_gdpval_gold/gdpval-gold.jsonl
+data-packs/mmeb-v2-image/llmbench_data_mmeb_v2_image/mmeb-v2-image.jsonl

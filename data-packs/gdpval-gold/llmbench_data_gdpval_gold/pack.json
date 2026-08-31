@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-gdpval-gold",
+  "version": "0.5.0",
+  "package": "llmbench_data_gdpval_gold",
+  "source_revision": "11e7900cdcac61bc4daf59e65feb238acda98fbf",
+  "datasets": {
+    "gdpval-gold": {
+      "file": "gdpval-gold.jsonl",
+      "count": 200,
+      "type": "agent",
+      "category": "生产力知识",
+      "metric": "judge_score",
+      "license": "LicenseRef-GDPval-Upstream",
+      "restriction": "local build only",
+      "source": "https://huggingface.co/datasets/openai/gdpval/resolve/11e7900cdcac61bc4daf59e65feb238acda98fbf/data/train-00000-of-00001.parquet",
+      "sha256": "9189523b67780ddf1ff7665c2f3f6e8d72e24ad2dce2c1df9fe1c834f4a0c9a8",
+      "recommended_max_tokens": 8192,
+      "regression_subset": true
+    }
+  }
+}

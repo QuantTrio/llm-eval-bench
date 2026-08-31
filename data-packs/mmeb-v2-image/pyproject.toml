@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "quanttrio-llmbench-data-mmeb-v2-image"
+version = "0.5.0"
+description = "Local-build 100-query MMEB-v2 Image regression pack for QuantTrio llmbench"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LicenseRef-MMEB-CIFAR-Upstream"
+authors = [{ name = "QuantTrio" }]
+[project.entry-points."llmbench.data_packs"]
+mmeb-v2-image = "llmbench_data_mmeb_v2_image:manifest"
+[tool.setuptools.package-data]
+llmbench_data_mmeb_v2_image = ["*.json", "*.jsonl", "NOTICE"]

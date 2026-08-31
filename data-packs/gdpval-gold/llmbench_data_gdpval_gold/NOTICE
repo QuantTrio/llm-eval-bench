@@ -1,0 +1,4 @@
+GDPval gold subset
+Source: https://huggingface.co/datasets/openai/gdpval
+Revision: 11e7900cdcac61bc4daf59e65feb238acda98fbf
+Review OpenAI GDPval dataset and grading terms before local build or use.

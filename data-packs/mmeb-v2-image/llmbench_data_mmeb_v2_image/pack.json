@@ -1,0 +1,21 @@
+{
+  "name": "quanttrio-llmbench-data-mmeb-v2-image",
+  "version": "0.5.0",
+  "package": "llmbench_data_mmeb_v2_image",
+  "source_revision": "2f069730be515ea60778413777816b53e2d2a697",
+  "datasets": {
+    "mmeb-v2-image": {
+      "file": "mmeb-v2-image.jsonl",
+      "count": 100,
+      "type": "embedding",
+      "category": "图像向量嵌入",
+      "metric": "recall_at_1",
+      "license": "LicenseRef-MMEB-CIFAR-Upstream",
+      "restriction": "local build only",
+      "source": "https://huggingface.co/datasets/TIGER-Lab/MMEB-eval/resolve/2f069730be515ea60778413777816b53e2d2a697/CIFAR-100/test-00000-of-00001.parquet",
+      "sha256": "a7b0db69538508131117b0ecf0deb0f7b922bab76ba7102103e35aa7b8450d23",
+      "recommended_max_tokens": 1,
+      "regression_subset": true
+    }
+  }
+}
