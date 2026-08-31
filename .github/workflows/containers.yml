@@ -9,7 +9,7 @@ on:
         default: 1.0.1
 
 permissions:
-  contents: write
+  contents: read
   packages: write
 
 jobs:
@@ -41,17 +41,3 @@ jobs:
             ghcr.io/quanttrio/${{ matrix.image }}:latest
           sbom: true
           provenance: mode=max
-      - name: Export public Docker archive
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          archive="/tmp/${{ matrix.image }}-${{ inputs.image_tag }}-linux-amd64.docker.tar"
-          docker buildx build \
-            --platform linux/amd64 \
-            --file "${{ matrix.dockerfile }}" \
-            --output "type=docker,name=ghcr.io/quanttrio/${{ matrix.image }}:${{ inputs.image_tag }},dest=$archive" \
-            .
-          cd /tmp
-          sha256sum "$(basename "$archive")" > "$(basename "$archive").sha256"
-          gh release upload "v${{ inputs.image_tag }}" --repo QuantTrio/llm-eval-bench \
-            "$archive" "$archive.sha256" --clobber

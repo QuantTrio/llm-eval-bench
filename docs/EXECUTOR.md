@@ -6,12 +6,9 @@ falls back to executing generated code on the machine running `llmbench`.
 Build the sandbox and service images:
 
 ```bash
-docker build -f executor/sandbox.Dockerfile -t ghcr.io/quanttrio/llmbench-sandbox:1.0.1 .
+docker build -f executor/sandbox.Dockerfile -t quanttrio/llmbench-sandbox:1.0.1 .
 docker compose -f executor/docker-compose.yml build
 ```
-
-For linux/amd64 deployments, the public v1.0.1 Release also provides Docker archives and matching
-`.sha256` files for `llmbench-sandbox` and `llmbench-executor`. Load them with `docker load -i`.
 
 The compose file expects a rootless Docker socket at `${XDG_RUNTIME_DIR}/docker.sock`. Put a TLS
 reverse proxy in front of port 8765. `POST /v1/jobs` is rejected over plain HTTP unless
@@ -26,7 +23,7 @@ A job request contains an ephemeral key and an allowlisted image:
 ```json
 {
   "ephemeral_key": "short-lived-secret",
-  "image": "ghcr.io/quanttrio/llmbench-sandbox:1.0.1",
+  "image": "quanttrio/llmbench-sandbox:1.0.1",
   "command": ["-c", "print('ok')"],
   "network": false
 }

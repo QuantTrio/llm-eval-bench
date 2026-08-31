@@ -16,7 +16,7 @@ targets:
   agent:
     executor_url: https://executor.example.com
     ephemeral_key_env: EXECUTOR_TASK_KEY
-    image: ghcr.io/quanttrio/llmbench-sandbox:1.0.1
+    image: quanttrio/llmbench-sandbox:1.0.1
 
 judge:
   base_url: http://127.0.0.1:8002/v1
