@@ -73,6 +73,7 @@ class OpenAICompatibleClient:
         max_tokens: int,
         stream: bool,
         seed: int | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> CompletionResult:
         body: dict[str, Any] = {
             "model": model,
@@ -84,6 +85,12 @@ class OpenAICompatibleClient:
         }
         if seed is not None:
             body["seed"] = seed
+        if extra_body:
+            protected = {"model", "messages", "stream"} & set(extra_body)
+            if protected:
+                names = ", ".join(sorted(protected))
+                raise ValueError(f"request extra body cannot override protected fields: {names}")
+            body.update(extra_body)
         if stream:
             body["stream_options"] = {"include_usage": True}
 

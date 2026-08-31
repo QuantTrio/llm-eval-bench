@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 - 2026-08-31
+
+- Raise the default evaluation output budget to 4096 tokens.
+- Add live progress events, incremental JSONL checkpoints, strict resume, and bounded workers.
+- Add reproducibility manifests with dataset and question fingerprints.
+- Separate native metrics and remove misleading cross-metric accuracy aliases.
+- Add truncation validity and reasoning-block-aware answer parsing.
+
 ## 0.1.1 - 2026-08-28
 
 - Make the public documentation and examples model-neutral.

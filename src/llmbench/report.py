@@ -20,6 +20,7 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
     quality = summary["quality"]
     performance = summary["performance"]
     config = summary["config"]
+    sample_score = quality.get("sample_mean_score", quality.get("mean_score"))
     lines = [
         f"# {title}",
         "",
@@ -32,21 +33,36 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
         "",
         "## Quality",
         "",
-        f"- Overall mean score: {_fmt(quality.get('mean_score'), percent=True)}",
-        f"- Accuracy@1: {_fmt(quality.get('accuracy_at_1'), percent=True)}",
-        f"- Pass@k: {_fmt(quality.get('pass_at_k'), percent=True)}",
-        f"- Majority@k: {_fmt(quality.get('majority_at_k'), percent=True)}",
-        f"- Consistency@k: {_fmt(quality.get('consistency_at_k'), percent=True)}",
+        f"- Sample mean score (mixed metrics): {_fmt(sample_score, percent=True)}",
+        f"- Composite score: {_fmt(quality.get('composite_score'), percent=True)}",
+        f"- Quality valid: `{quality.get('quality_valid', True)}`",
         f"- Parse fail rate: {_fmt(quality.get('parse_fail_rate'), percent=True)}",
-        "",
-        "| Dataset | Metric | Samples | Questions | Score | Parse fail |",
-        "|---|---|---:|---:|---:|---:|",
     ]
+    if quality.get("pass_at_k") is not None:
+        lines.extend(
+            [
+                f"- Accuracy@1: {_fmt(quality.get('accuracy_at_1'), percent=True)}",
+                f"- Pass@{quality.get('pass_k')}: {_fmt(quality.get('pass_at_k'), percent=True)}",
+                f"- Majority@{quality.get('pass_k')}: "
+                f"{_fmt(quality.get('majority_at_k'), percent=True)}",
+                f"- Consistency@{quality.get('pass_k')}: "
+                f"{_fmt(quality.get('consistency_at_k'), percent=True)}",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "| Dataset | Metric | Samples | Questions | Score | Parse fail | Truncated | Valid |",
+            "|---|---|---:|---:|---:|---:|---:|---|",
+        ]
+    )
     for dataset, values in quality.get("by_dataset", {}).items():
         lines.append(
             f"| {dataset} | {values['metric']} | {values['samples']} | {values['questions']} | "
-            f"{_fmt(values['mean_score'], percent=True)} | "
-            f"{_fmt(values['parse_fail_rate'], percent=True)} |"
+            f"{_fmt(values.get('score', values.get('mean_score')), percent=True)} | "
+            f"{_fmt(values['parse_fail_rate'], percent=True)} | "
+            f"{_fmt(values.get('truncation_rate'), percent=True)} | "
+            f"{values.get('quality_valid', True)} |"
         )
     lines.extend(
         [
@@ -74,7 +90,7 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
     for question_type, values in quality.get("by_question_type", {}).items():
         lines.append(
             f"| {question_type} | {values['samples']} | "
-            f"{_fmt(values['mean_score'], percent=True)} |"
+            f"{_fmt(values.get('score', values.get('mean_score')), percent=True)} |"
         )
     p95_latency = performance["latency_ms"].get("p95")
     lines.extend(
@@ -93,6 +109,7 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
             f"- Error rate: {_fmt(performance['error_rate'], percent=True)}",
             f"- Timeout rate: {_fmt(performance['timeout_rate'], percent=True)}",
             f"- Truncated responses: {performance['truncated_responses']}",
+            f"- Truncation rate: {_fmt(performance.get('truncation_rate'), percent=True)}",
             "",
             "## Errors",
             "",
@@ -114,7 +131,10 @@ def html_report(summary: dict[str, Any], *, title: str = "Model Benchmark Report
     quality = summary["quality"]
     performance = summary["performance"]
     cards = [
-        ("Mean score", _fmt(quality.get("mean_score"), percent=True)),
+        (
+            "Sample mean",
+            _fmt(quality.get("sample_mean_score", quality.get("mean_score")), percent=True),
+        ),
         ("QPS", _fmt(performance.get("qps"))),
         ("Latency p95", f"{_fmt(performance['latency_ms'].get('p95'))} ms"),
         ("Error rate", _fmt(performance.get("error_rate"), percent=True)),
@@ -175,8 +195,16 @@ def _relative_change(candidate: float | None, baseline: float | None) -> float |
 def compare_summaries(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
     base_quality = baseline["quality"]
     cand_quality = candidate["quality"]
-    base_overall = base_quality.get("mean_score", base_quality.get("accuracy"))
-    cand_overall = cand_quality.get("mean_score", cand_quality.get("accuracy"))
+    base_overall = base_quality.get(
+        "composite_score", base_quality.get("sample_mean_score", base_quality.get("mean_score"))
+    )
+    cand_overall = cand_quality.get(
+        "composite_score", cand_quality.get("sample_mean_score", cand_quality.get("mean_score"))
+    )
+    if base_overall is None:
+        base_overall = base_quality.get("sample_mean_score")
+    if cand_overall is None:
+        cand_overall = cand_quality.get("sample_mean_score")
     datasets: dict[str, Any] = {}
     names = sorted(
         set(base_quality.get("by_dataset", {})) | set(cand_quality.get("by_dataset", {}))
@@ -184,8 +212,12 @@ def compare_summaries(baseline: dict[str, Any], candidate: dict[str, Any]) -> di
     for name in names:
         base_values = base_quality.get("by_dataset", {}).get(name) or {}
         cand_values = cand_quality.get("by_dataset", {}).get(name) or {}
-        base_score = base_values.get("mean_score", base_values.get("accuracy"))
-        cand_score = cand_values.get("mean_score", cand_values.get("accuracy"))
+        base_score = base_values.get(
+            "score", base_values.get("mean_score", base_values.get("accuracy"))
+        )
+        cand_score = cand_values.get(
+            "score", cand_values.get("mean_score", cand_values.get("accuracy"))
+        )
         datasets[name] = {
             "baseline": base_score,
             "candidate": cand_score,

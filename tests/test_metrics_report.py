@@ -74,14 +74,43 @@ def test_category_type_and_dataset_breakdowns(tmp_path) -> None:
         ),
     ]
     summary = make_summary(rows)
-    assert summary["quality"]["mean_score"] == pytest.approx(0.6)
+    assert summary["quality"]["sample_mean_score"] == pytest.approx(0.6)
     assert summary["quality"]["by_dataset"]["drop"]["metric"] == "token_f1"
+    assert "accuracy" not in summary["quality"]["by_dataset"]["drop"]
     assert summary["quality"]["by_category"]["Comprehensive"]["macro_mean_score"] == 0.5
-    assert summary["quality"]["by_question_type"]["f1"]["mean_score"] == 0.8
+    assert summary["quality"]["by_question_type"]["f1"]["score"] == 0.8
+    assert "pass_at_k" not in summary["quality"]
     paths = write_run_artifacts(tmp_path / "run", summary, rows)
     assert all(path.exists() for path in paths.values())
     assert "Category breakdown" in paths["markdown"].read_text(encoding="utf-8")
     assert len(paths["raw"].read_text(encoding="utf-8").splitlines()) == 3
+
+
+def test_standard_pass_at_k_only_for_repeated_binary_samples() -> None:
+    rows = [
+        result("q1", 0, sample_id=1),
+        result("q1", 1, sample_id=2),
+        result("q2", 0, sample_id=1),
+        result("q2", 0, sample_id=2),
+        result("f1", 0.2, dataset="drop", question_type="f1", metric="token_f1", sample_id=1),
+        result("f1", 0.3, dataset="drop", question_type="f1", metric="token_f1", sample_id=2),
+    ]
+    summary = make_summary(rows)
+    assert summary["quality"]["pass_k"] == 2
+    assert summary["quality"]["pass_at_k"] == 0.5
+    assert summary["quality"]["accuracy_at_1"] == 0.0
+
+
+def test_truncation_marks_dataset_quality_invalid() -> None:
+    rows = [result(f"q{index}", 1) for index in range(20)]
+    rows[0].finish_reason = "length"
+    rows[1].finish_reason = "length"
+    summary = make_summary(rows)
+    dataset = summary["quality"]["by_dataset"]["mmlu-pro"]
+    assert dataset["truncation_rate"] == 0.1
+    assert dataset["quality_valid"] is False
+    assert summary["quality"]["quality_valid"] is False
+    assert summary["quality"]["invalid_datasets"] == ["mmlu-pro"]
 
 
 def test_comparison_artifacts(tmp_path) -> None:

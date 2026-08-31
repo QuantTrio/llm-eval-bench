@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import time
+import uuid
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 
 from .client import OpenAICompatibleClient
@@ -10,7 +13,11 @@ from .scoring import build_messages, build_prompt, score_output
 
 
 def new_run_id() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"{stamp}-{uuid.uuid4().hex[:8]}"
+
+
+ResultCallback = Callable[[RequestResult, int, int], Awaitable[None] | None]
 
 
 class BenchmarkRunner:
@@ -22,10 +29,11 @@ class BenchmarkRunner:
         concurrency: int,
         temperature: float,
         top_p: float,
-        max_tokens: int,
+        max_tokens: int | None,
         stream: bool,
         seed: int,
         run_id: str | None = None,
+        request_extra_body: dict | None = None,
     ) -> None:
         if concurrency < 1:
             raise ValueError("concurrency must be at least 1")
@@ -38,25 +46,66 @@ class BenchmarkRunner:
         self.stream = stream
         self.seed = seed
         self.run_id = run_id or new_run_id()
+        self.request_extra_body = dict(request_extra_body or {})
 
     async def evaluate(
-        self, items: list[DatasetItem], *, n_samples: int = 1
+        self,
+        items: list[DatasetItem],
+        *,
+        n_samples: int = 1,
+        existing: list[RequestResult] | None = None,
+        on_result: ResultCallback | None = None,
     ) -> tuple[list[RequestResult], float]:
         if n_samples < 1:
             raise ValueError("n_samples must be at least 1")
-        semaphore = asyncio.Semaphore(self.concurrency)
         started = time.perf_counter()
+        results = list(existing or [])
+        completed_keys = {result.key for result in results}
+        total = len(items) * n_samples
+        completed = len(results)
+        queue: asyncio.Queue[tuple[DatasetItem, int] | None] = asyncio.Queue(
+            maxsize=self.concurrency * 2
+        )
+        result_lock = asyncio.Lock()
 
-        async def bounded(item: DatasetItem, sample_id: int) -> RequestResult:
-            async with semaphore:
-                return await self._one(item, sample_id)
+        async def producer() -> None:
+            for item in items:
+                for sample_id in range(1, n_samples + 1):
+                    if (item.dataset, item.id, sample_id) not in completed_keys:
+                        await queue.put((item, sample_id))
+            for _ in range(self.concurrency):
+                await queue.put(None)
+
+        async def worker() -> None:
+            nonlocal completed
+            while True:
+                job = await queue.get()
+                try:
+                    if job is None:
+                        return
+                    result = await self._one(*job)
+                    async with result_lock:
+                        results.append(result)
+                        completed += 1
+                        current = completed
+                    if on_result is not None:
+                        callback_result = on_result(result, current, total)
+                        if inspect.isawaitable(callback_result):
+                            await callback_result
+                finally:
+                    queue.task_done()
 
         tasks = [
-            asyncio.create_task(bounded(item, sample_id))
-            for item in items
-            for sample_id in range(1, n_samples + 1)
+            asyncio.create_task(producer()),
+            *(asyncio.create_task(worker()) for _ in range(self.concurrency)),
         ]
-        results = await asyncio.gather(*tasks)
+        try:
+            await asyncio.gather(*tasks)
+        except BaseException:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
         return results, time.perf_counter() - started
 
     async def stress(
@@ -65,6 +114,7 @@ class BenchmarkRunner:
         *,
         duration: float,
         max_requests: int | None = None,
+        on_result: ResultCallback | None = None,
     ) -> tuple[list[RequestResult], float]:
         if duration <= 0 and max_requests is None:
             raise ValueError("duration must be positive when max_requests is not set")
@@ -83,7 +133,16 @@ class BenchmarkRunner:
                     index = counter
                     counter += 1
                 item = prompts[index % len(prompts)]
-                results.append(await self._one(item, index + 1))
+                result = await self._one(item, index + 1)
+                results.append(result)
+                if on_result is not None:
+                    callback_result = on_result(
+                        result,
+                        len(results),
+                        max_requests or 0,
+                    )
+                    if inspect.isawaitable(callback_result):
+                        await callback_result
 
         await asyncio.gather(*(worker() for _ in range(self.concurrency)))
         results.sort(key=lambda row: row.sample_id)
@@ -91,14 +150,17 @@ class BenchmarkRunner:
 
     async def _one(self, item: DatasetItem, sample_id: int) -> RequestResult:
         messages = build_messages(item)
+        recommended = int(item.metadata.get("recommended_max_tokens") or 4096)
+        max_tokens = self.max_tokens if self.max_tokens is not None else max(4096, recommended)
         completion = await self.client.complete(
             model=self.model,
             messages=messages,
             temperature=self.temperature,
             top_p=self.top_p,
-            max_tokens=self.max_tokens,
+            max_tokens=max_tokens,
             stream=self.stream,
             seed=self.seed + sample_id - 1,
+            extra_body=self.request_extra_body,
         )
         if completion.error:
             parsed, score, parse_failed = None, 0.0 if item.answer is not None else None, False
@@ -130,4 +192,5 @@ class BenchmarkRunner:
             error_type=completion.error_type,
             http_status=completion.http_status,
             attempts=completion.attempts,
+            max_tokens=max_tokens,
         )

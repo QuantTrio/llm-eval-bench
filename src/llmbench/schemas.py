@@ -80,6 +80,16 @@ class RequestResult:
     error_type: str | None
     http_status: int | None
     attempts: int
+    max_tokens: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    @property
+    def key(self) -> tuple[str, str, int]:
+        return (self.dataset, self.question_id, self.sample_id)
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> RequestResult:
+        fields = cls.__dataclass_fields__
+        return cls(**{key: value[key] for key in fields if key in value})

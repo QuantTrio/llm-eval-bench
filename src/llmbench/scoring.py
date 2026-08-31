@@ -47,11 +47,23 @@ def _contains_cjk(value: str) -> bool:
     return bool(re.search(r"[\u3400-\u9fff]", value))
 
 
+def final_answer_view(output: str) -> str:
+    """Return the answer portion while keeping the original output for artifacts."""
+    lowered = output.casefold()
+    closing = lowered.rfind("</think>")
+    if closing >= 0:
+        return output[closing + len("</think>") :].strip()
+    if "<think>" in lowered:
+        return ""
+    return output.strip()
+
+
 def parse_choice(output: str, valid_choices: set[str]) -> str | None:
+    output = final_answer_view(output)
     for pattern in CHOICE_PATTERNS:
-        match = pattern.search(output.strip())
-        if match and match.group(1).upper() in valid_choices:
-            return match.group(1).upper()
+        matches = pattern.findall(output)
+        if matches and matches[-1].upper() in valid_choices:
+            return matches[-1].upper()
     return None
 
 
@@ -69,6 +81,7 @@ def _normalize_number(value: str) -> str | None:
 
 
 def parse_math(output: str) -> str | None:
+    output = final_answer_view(output)
     patterns = (
         re.compile(r"\\boxed\{\s*([-+]?\d[\d,]*(?:\.\d+)?)\s*\}"),
         re.compile(r"####\s*([-+]?\d[\d,]*(?:\.\d+)?)"),
@@ -126,10 +139,10 @@ def score_output(item: DatasetItem, output: str) -> tuple[str | None, float | No
             correct = parsed == gold
         return parsed, float(correct), False
     if item.type == "f1":
-        parsed = output.strip()
+        parsed = final_answer_view(output)
         references = [item.answer, *(item.metadata.get("accepted_answers") or [])]
         score = max(token_f1(parsed, reference) for reference in references if reference)
         return parsed, score, not bool(parsed)
-    parsed = normalize_text(output)
+    parsed = normalize_text(final_answer_view(output))
     gold = normalize_text(item.answer)
     return parsed, float(parsed == gold), not bool(parsed)

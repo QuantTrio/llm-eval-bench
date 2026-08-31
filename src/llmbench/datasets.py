@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 from importlib.resources import files
@@ -16,6 +17,24 @@ def _manifest() -> dict[str, dict[str, Any]]:
 
 def list_datasets() -> list[dict[str, Any]]:
     return [dict(name=name, **metadata) for name, metadata in sorted(_manifest().items())]
+
+
+def dataset_metadata(name_or_path: str) -> dict[str, Any]:
+    candidate = Path(name_or_path).expanduser()
+    if candidate.exists():
+        payload = candidate.read_bytes()
+        return {
+            "count": sum(bool(line.strip()) for line in payload.splitlines()),
+            "category": "Custom",
+            "metric": "custom",
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "source": str(candidate.resolve()),
+            "recommended_max_tokens": 4096,
+        }
+    metadata = _manifest().get(name_or_path)
+    if metadata is None:
+        raise ValueError(f"Unknown dataset '{name_or_path}'")
+    return dict(metadata)
 
 
 def _read_jsonl(path: Any, *, source: str) -> list[DatasetItem]:
@@ -48,6 +67,7 @@ def load_dataset(
                 "benchmark_metric",
                 "token_f1" if item.type == "f1" else "exact_match",
             )
+            item.metadata.setdefault("recommended_max_tokens", 4096)
     else:
         manifest = _manifest()
         if name_or_path not in manifest:
@@ -62,6 +82,9 @@ def load_dataset(
         for item in items:
             item.metadata.setdefault("benchmark_category", metadata["category"])
             item.metadata.setdefault("benchmark_metric", metadata["metric"])
+            item.metadata.setdefault(
+                "recommended_max_tokens", metadata.get("recommended_max_tokens", 4096)
+            )
 
     if sample is not None:
         if sample < 1:

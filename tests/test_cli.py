@@ -119,8 +119,23 @@ def test_cli_eval_end_to_end(mock_server: str, tmp_path) -> None:
     assert f"Summary: {output / 'summary.json'}" in result.stdout
     summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
     assert summary["model"] == "mock-model"
-    assert summary["quality"]["mean_score"] == 1.0
+    assert summary["schema_version"] == 2
+    assert summary["quality"]["sample_mean_score"] == 1.0
+    assert "pass_at_k" not in summary["quality"]
     assert summary["performance"]["successful_requests"] == 1
+    assert summary["performance"]["truncation_rate"] == 0
+    raw = json.loads((output / "raw_results.jsonl").read_text(encoding="utf-8"))
+    assert raw["max_tokens"] == 4096
+    assert (output / "events.jsonl").exists()
+    assert (output / "run_manifest.json").exists()
+    assert json.loads((output / "run_state.json").read_text())["status"] == "completed"
+
+    resumed = CliRunner().invoke(
+        app,
+        ["eval", "--api-key", "EMPTY", "--resume", str(output)],
+    )
+    assert resumed.exit_code == 0, resumed.exception
+    assert len((output / "raw_results.jsonl").read_text().splitlines()) == 1
 
 
 def test_cli_streaming_stress(mock_server: str, tmp_path) -> None:

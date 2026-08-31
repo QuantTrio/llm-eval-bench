@@ -10,7 +10,7 @@ raw responses plus JSON, Markdown, and HTML reports.
 Install the tagged release in one command:
 
 ```bash
-python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.1.1/quanttrio_llmbench-0.1.1-py3-none-any.whl"
+python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.2.0/quanttrio_llmbench-0.2.0-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:
@@ -34,7 +34,6 @@ llmbench run \
   --limit 100 \
   --concurrency 32 \
   --temperature 0 \
-  --max-tokens 1024 \
   --output-dir runs/candidate-model
 ```
 
@@ -65,7 +64,7 @@ llmbench eval --dataset mmlu-pro,gpqa-diamond,ceval --limit 100 --concurrency 1
 llmbench eval --dataset gsm8k,drop --sample 200 --seed 42 --n-samples 3
 
 # Quality and serving performance together
-llmbench run --limit 100 --concurrency 32 --stream --max-tokens 1024
+llmbench run --limit 100 --concurrency 32 --stream
 
 # Fixed-duration or fixed-request load tests
 llmbench stress --duration 60 --concurrency 64 --max-tokens 128
@@ -83,15 +82,30 @@ llmbench stress --requests 500 --concurrency 64 --max-tokens 128
 | `--concurrency N` | Maximum in-flight requests. |
 | `--n-samples N` | Generations per question; enables pass@k and consistency metrics. |
 | `--temperature`, `--top-p` | Sampling settings sent to the server. |
-| `--max-tokens` | Maximum generated tokens per response. |
+| `--max-tokens` | Maximum generated tokens; defaults to 4096 or a higher dataset recommendation. |
 | `--stream` / `--no-stream` | Enable or disable SSE; streaming enables TTFT/TPOT. |
 | `--timeout`, `--retries`, `--retry-backoff` | Request failure policy. |
 | `--duration` / `--requests` | Stress-test stopping condition. |
 | `--output-dir` | Run artifact directory; generated automatically when omitted. |
 | `--memory-gb` | Optional measured model-memory value recorded in the report. |
+| `--checkpoint-every` | Durably sync after this many completed requests; defaults to 1. |
+| `--progress-interval` | Seconds between structured progress updates; defaults to 5. |
+| `--resume DIR` | Strictly resume an interrupted run from its saved manifest. |
+| `--request-extra-body JSON` | Add service-specific request fields; core fields cannot be replaced. |
 
 Run `llmbench COMMAND --help` for the authoritative options and defaults.
 When `--sample` is present it takes precedence over the default or explicit `--limit`.
+
+### Progress and resume
+
+Every completed request is appended immediately, so interruption does not discard prior work.
+Resume uses the saved dataset, model, prompt, and generation fingerprint:
+
+```bash
+llmbench run --resume runs/candidate-model
+```
+
+Changing the dataset, model, seed, sampling configuration, or request body requires a new run.
 
 ## Offline benchmark bundle
 
@@ -128,6 +142,9 @@ Every run writes:
 ```text
 summary.json
 raw_results.jsonl
+events.jsonl
+run_manifest.json
+run_state.json
 report.md
 report.html
 ```
@@ -156,23 +173,26 @@ independent results for each dataset category and question type:
 ```json
 {
   "quality": {
-    "mean_score": 0.7425,
+    "sample_mean_score": 0.7425,
+    "composite_score": null,
+    "quality_valid": true,
     "by_category": {
       "Comprehensive": {"macro_mean_score": 0.78, "samples": 300},
       "Math Reasoning": {"macro_mean_score": 0.71, "samples": 100},
       "Reading Comprehension": {"macro_mean_score": 0.67, "samples": 100}
     },
     "by_question_type": {
-      "multiple_choice": {"mean_score": 0.78, "samples": 600},
-      "math": {"mean_score": 0.71, "samples": 100},
-      "f1": {"mean_score": 0.67, "samples": 100}
+      "multiple_choice": {"score": 0.78, "samples": 600},
+      "math": {"score": 0.71, "samples": 100},
+      "f1": {"score": 0.67, "samples": 100}
     }
   },
   "performance": {
     "qps": 12.4,
     "latency_ms": {"p50": 1820.0, "p95": 3910.0},
     "ttft_ms": {"p50": 210.0, "p95": 480.0},
-    "error_rate": 0.0
+    "error_rate": 0.0,
+    "truncation_rate": 0.0
   }
 }
 ```

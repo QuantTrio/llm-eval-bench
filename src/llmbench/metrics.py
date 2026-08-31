@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from math import comb
 from statistics import mean
 from typing import Any
 
 from .schemas import RequestResult
+
+BINARY_METRICS = {"accuracy", "exact_match", "mc1_accuracy"}
 
 
 def percentile(values: list[float], quantile: float) -> float | None:
@@ -47,11 +50,10 @@ def summarize(
     tpot = [result.tpot_ms for result in successful if result.tpot_ms is not None]
     errors = Counter(result.error_type or "unknown" for result in results if result.error)
 
-    overall_score = mean(result.score or 0.0 for result in scored) if scored else None
     quality: dict[str, Any] = {
         "scored_samples": len(scored),
-        "mean_score": overall_score,
-        "accuracy": overall_score,
+        "sample_mean_score": mean(result.score or 0.0 for result in scored) if scored else None,
+        "composite_score": None,
         "parse_failed": sum(result.parse_failed for result in scored),
         "parse_fail_rate": (
             sum(result.parse_failed for result in scored) / len(scored) if scored else None
@@ -59,28 +61,33 @@ def summarize(
         "by_dataset": {},
         "by_category": {},
         "by_question_type": {},
+        "by_metric": {},
     }
     grouped_dataset: dict[str, list[RequestResult]] = defaultdict(list)
     grouped_category: dict[str, list[RequestResult]] = defaultdict(list)
     grouped_type: dict[str, list[RequestResult]] = defaultdict(list)
     grouped_question: dict[tuple[str, str], list[RequestResult]] = defaultdict(list)
+    grouped_metric: dict[str, list[RequestResult]] = defaultdict(list)
     for result in scored:
         grouped_dataset[result.dataset].append(result)
         grouped_category[result.benchmark_category].append(result)
         grouped_type[result.question_type].append(result)
         grouped_question[(result.dataset, result.question_id)].append(result)
+        grouped_metric[result.metric].append(result)
     for dataset, rows in sorted(grouped_dataset.items()):
+        truncation_rate = sum(row.finish_reason == "length" for row in rows) / len(rows)
         quality["by_dataset"][dataset] = {
             "samples": len(rows),
             "questions": len({row.question_id for row in rows}),
             "metric": rows[0].metric,
-            "mean_score": mean(row.score or 0.0 for row in rows),
-            "accuracy": mean(row.score or 0.0 for row in rows),
+            "score": mean(row.score or 0.0 for row in rows),
             "parse_fail_rate": sum(row.parse_failed for row in rows) / len(rows),
+            "truncation_rate": truncation_rate,
+            "quality_valid": truncation_rate <= 0.05,
         }
     for category, rows in sorted(grouped_category.items()):
         dataset_scores = [
-            quality["by_dataset"][dataset]["mean_score"]
+            quality["by_dataset"][dataset]["score"]
             for dataset in sorted({row.dataset for row in rows})
         ]
         quality["by_category"][category] = {
@@ -92,17 +99,34 @@ def summarize(
     for question_type, rows in sorted(grouped_type.items()):
         quality["by_question_type"][question_type] = {
             "samples": len(rows),
-            "mean_score": mean(row.score or 0.0 for row in rows),
+            "score": mean(row.score or 0.0 for row in rows),
         }
-    if grouped_question:
+    for metric, rows in sorted(grouped_metric.items()):
+        quality["by_metric"][metric] = {
+            "samples": len(rows),
+            "score": mean(row.score or 0.0 for row in rows),
+        }
+
+    binary_questions = {
+        key: rows
+        for key, rows in grouped_question.items()
+        if rows and rows[0].metric in BINARY_METRICS
+    }
+    max_samples = max((len(rows) for rows in binary_questions.values()), default=0)
+    if max_samples > 1:
         first_scores = []
         pass_scores = []
         majority_scores = []
         consistency = []
-        for rows in grouped_question.values():
+        for rows in binary_questions.values():
             ordered = sorted(rows, key=lambda row: row.sample_id)
             first_scores.append(ordered[0].score or 0.0)
-            pass_scores.append(float(any((row.score or 0.0) > 0 for row in ordered)))
+            correct = sum((row.score or 0.0) == 1.0 for row in ordered)
+            n = len(ordered)
+            k = n
+            pass_scores.append(
+                1.0 - (comb(n - correct, k) / comb(n, k) if n - correct >= k else 0.0)
+            )
             answers = [row.parsed_answer for row in ordered if row.parsed_answer is not None]
             if answers:
                 majority = Counter(answers).most_common(1)[0][0]
@@ -116,10 +140,16 @@ def summarize(
             {
                 "accuracy_at_1": mean(first_scores),
                 "pass_at_k": mean(pass_scores),
+                "pass_k": max_samples,
                 "majority_at_k": mean(majority_scores),
                 "consistency_at_k": mean(consistency),
             }
         )
+    invalid = [
+        dataset for dataset, values in quality["by_dataset"].items() if not values["quality_valid"]
+    ]
+    quality["quality_valid"] = not invalid
+    quality["invalid_datasets"] = invalid
 
     performance = {
         "total_requests": total,
@@ -141,13 +171,18 @@ def summarize(
         "error_rate": (total - len(successful)) / total if total else 0.0,
         "timeout_rate": errors.get("timeout", 0) / total if total else 0.0,
         "truncated_responses": sum(row.finish_reason == "length" for row in successful),
+        "truncation_rate": (
+            sum(row.finish_reason == "length" for row in successful) / len(successful)
+            if successful
+            else 0.0
+        ),
         "latency_ms": _distribution(latency),
         "ttft_ms": _distribution(ttft),
         "tpot_ms": _distribution(tpot),
         "errors": dict(sorted(errors.items())),
     }
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "run_id": run_id,
         "mode": mode,
         "model": model,

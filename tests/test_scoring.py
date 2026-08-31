@@ -64,3 +64,20 @@ def test_math_and_f1_scoring() -> None:
     assert score == 1.0
     assert failed is False
     assert token_f1("red fox jumped", "the red fox") == pytest.approx(0.8)
+
+
+def test_scoring_uses_answer_after_thinking_block() -> None:
+    item = DatasetItem(
+        id="q1",
+        dataset="test",
+        type="multiple_choice",
+        question="Which one?",
+        choices={"A": "first", "B": "second"},
+        answer="B",
+    )
+    assert score_output(item, '<think>I considered A.</think>{"answer":"B"}') == (
+        "B",
+        1.0,
+        False,
+    )
+    assert score_output(item, "<think>I considered B but was truncated") == (None, 0.0, True)
