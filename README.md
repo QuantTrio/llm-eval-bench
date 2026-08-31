@@ -10,7 +10,7 @@ raw responses plus JSON, Markdown, and HTML reports.
 Install the tagged release in one command:
 
 ```bash
-python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.2.0/quanttrio_llmbench-0.2.0-py3-none-any.whl"
+python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v0.3.0/quanttrio_llmbench-0.3.0-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:
@@ -95,6 +95,13 @@ llmbench stress --requests 500 --concurrency 64 --max-tokens 128
 
 Run `llmbench COMMAND --help` for the authoritative options and defaults.
 When `--sample` is present it takes precedence over the default or explicit `--limit`.
+
+Run the same command from YAML; explicit CLI options and `OPENAI_*` environment variables take
+precedence over YAML values:
+
+```bash
+llmbench run --config examples/bench.yaml --concurrency 32
+```
 
 ### Progress and resume
 
@@ -205,14 +212,17 @@ Compare a baseline and quantized candidate:
 
 ```bash
 llmbench compare \
-  --baseline runs/baseline-fp16/summary.json \
-  --candidate runs/candidate-quantized/summary.json \
+  --baseline runs/baseline-fp16 \
+  --candidate runs/candidate-quantized \
+  --policy examples/regression.yaml \
   --report reports/quantized-vs-fp16.html
 ```
 
-The comparison reports per-dataset absolute/relative score changes, throughput and QPS changes,
-p95 latency reduction, error-rate change, and memory reduction when both runs specify
-`--memory-gb`.
+Comparison requires matching dataset hashes, request keys, prompts, seeds, sampling settings, and
+generation settings. It emits a paired result JSONL, per-dataset changes, correct-to-wrong
+transitions, and deterministic 95% bootstrap confidence intervals. Exit codes are `0` for pass,
+`2` for a regression-policy failure, `3` for incomparable runs, and `4` for infrastructure or
+artifact errors.
 
 ## Custom local datasets
 

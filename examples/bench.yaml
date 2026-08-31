@@ -1,0 +1,26 @@
+schema_version: 2
+
+targets:
+  chat:
+    base_url: http://127.0.0.1:8000/v1
+    model: local-model
+    api_key_env: CHAT_API_KEY
+
+run:
+  datasets:
+    - mmlu-pro
+    - gpqa-diamond
+    - gsm8k
+  limit_per_dataset: 100
+  concurrency: 16
+  temperature: 0
+  top_p: 1
+  max_tokens: 4096
+  timeout: 300
+  retries: 2
+  retry_backoff: 2
+  n_samples: 1
+  seed: 42
+  stream: true
+  checkpoint_every: 1
+  progress_interval: 5

@@ -162,3 +162,49 @@ def test_cli_streaming_stress(mock_server: str, tmp_path) -> None:
     summary = json.loads((output / "summary.json").read_text(encoding="utf-8"))
     assert summary["performance"]["total_requests"] == 4
     assert summary["performance"]["ttft_ms"]["p95"] is not None
+
+
+def test_cli_yaml_config_and_cli_override(mock_server: str, tmp_path, monkeypatch) -> None:
+    dataset = tmp_path / "custom.jsonl"
+    dataset.write_text(
+        json.dumps(
+            {
+                "id": "q1",
+                "dataset": "custom",
+                "type": "exact_match",
+                "question": "Capital of France?",
+                "answer": "Paris",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "configured-run"
+    config = tmp_path / "bench.yaml"
+    config.write_text(
+        "\n".join(
+            [
+                "schema_version: 2",
+                "targets:",
+                "  chat:",
+                f"    base_url: {mock_server}",
+                "    model: mock-model",
+                "    api_key_env: TEST_BENCH_KEY",
+                "run:",
+                f"  datasets: ['{dataset}']",
+                "  limit_per_dataset: 1",
+                "  max_tokens: 16",
+                f"  output_dir: {output}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("TEST_BENCH_KEY", "EMPTY")
+    result = CliRunner().invoke(
+        app,
+        ["eval", "--config", str(config), "--max-tokens", "32"],
+    )
+    assert result.exit_code == 0, result.exception
+    raw = json.loads((output / "raw_results.jsonl").read_text())
+    assert raw["max_tokens"] == 32

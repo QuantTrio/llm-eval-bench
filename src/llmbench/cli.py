@@ -14,10 +14,12 @@ from . import __version__
 from .artifacts import RunArtifactWriter, utc_now
 from .catalog import list_benchmarks, report_count_for_dataset
 from .client import OpenAICompatibleClient
+from .comparison import IncomparableRunsError, compare_run_directories, evaluate_policy
+from .config import load_bench_config, load_yaml, secret_from_env
 from .datasets import list_datasets as dataset_catalog
 from .datasets import load_many
 from .metrics import summarize
-from .report import compare_summaries, write_comparison, write_run_artifacts
+from .report import write_comparison, write_run_artifacts
 from .repro import build_run_manifest, canonical_hash
 from .runner import BenchmarkRunner
 
@@ -104,6 +106,63 @@ def _parse_extra_body(value: str | None) -> dict:
             "--request-extra-body cannot override: " + ", ".join(sorted(protected))
         )
     return payload
+
+
+def _merge_bench_config(
+    ctx: typer.Context,
+    config_path: Path | None,
+    values: dict,
+) -> dict:
+    if config_path is None or values.get("resume") is not None:
+        return values
+    try:
+        config = load_bench_config(config_path)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    target = (config.get("targets") or {}).get("chat") or {}
+    run = config.get("run") or {}
+    configured: dict[str, object] = {}
+    if target.get("base_url") is not None:
+        configured["base_url"] = target["base_url"]
+    if target.get("model") is not None:
+        configured["model"] = target["model"]
+    if target.get("api_key_env") is not None:
+        configured["api_key"] = secret_from_env(str(target["api_key_env"]))
+    run_mapping = {
+        "datasets": "dataset",
+        "limit_per_dataset": "limit",
+        "limit": "limit",
+        "sample": "sample",
+        "concurrency": "concurrency",
+        "temperature": "temperature",
+        "top_p": "top_p",
+        "max_tokens": "max_tokens",
+        "timeout": "timeout",
+        "retries": "retries",
+        "retry_backoff": "retry_backoff",
+        "n_samples": "n_samples",
+        "seed": "seed",
+        "stream": "stream",
+        "output_dir": "output_dir",
+        "memory_gb": "memory_gb",
+        "checkpoint_every": "checkpoint_every",
+        "progress_interval": "progress_interval",
+        "request_extra_body": "request_extra_body",
+    }
+    for source, target_name in run_mapping.items():
+        if source in run:
+            configured[target_name] = run[source]
+    if isinstance(configured.get("dataset"), list):
+        configured["dataset"] = ",".join(str(item) for item in configured["dataset"])
+    if isinstance(configured.get("output_dir"), str):
+        configured["output_dir"] = Path(str(configured["output_dir"]))
+    if isinstance(configured.get("request_extra_body"), dict):
+        configured["request_extra_body"] = json.dumps(configured["request_extra_body"])
+    for name, value in configured.items():
+        source = ctx.get_parameter_source(name)
+        if source is None or source.name == "DEFAULT":
+            values[name] = value
+    return values
 
 
 async def _resolve(client: OpenAICompatibleClient, model: str | None) -> tuple[str, list[str]]:
@@ -480,6 +539,7 @@ def _evaluation_command(
 
 @app.command("eval")
 def eval_command(
+    ctx: typer.Context,
     base_url: BaseUrl = None,
     api_key: ApiKey = None,
     model: Annotated[str | None, typer.Option("--model")] = None,
@@ -509,37 +569,43 @@ def eval_command(
     progress_interval: Annotated[float, typer.Option("--progress-interval", min=0.1)] = 5.0,
     resume: Annotated[Path | None, typer.Option("--resume", exists=True, file_okay=False)] = None,
     request_extra_body: Annotated[str | None, typer.Option("--request-extra-body")] = None,
+    config: Annotated[Path | None, typer.Option("--config", exists=True, readable=True)] = None,
 ) -> None:
     """Run a low-concurrency quality evaluation."""
-    _evaluation_command(
-        "eval",
-        base_url,
-        api_key,
-        model,
-        dataset,
-        limit,
-        sample,
-        concurrency,
-        temperature,
-        top_p,
-        max_tokens,
-        timeout,
-        retries,
-        retry_backoff,
-        n_samples,
-        seed,
-        stream,
-        output_dir,
-        memory_gb,
-        checkpoint_every,
-        progress_interval,
-        resume,
-        request_extra_body,
+    values = _merge_bench_config(
+        ctx,
+        config,
+        {
+            "base_url": base_url,
+            "api_key": api_key,
+            "model": model,
+            "dataset": dataset,
+            "limit": limit,
+            "sample": sample,
+            "concurrency": concurrency,
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_tokens": max_tokens,
+            "timeout": timeout,
+            "retries": retries,
+            "retry_backoff": retry_backoff,
+            "n_samples": n_samples,
+            "seed": seed,
+            "stream": stream,
+            "output_dir": output_dir,
+            "memory_gb": memory_gb,
+            "checkpoint_every": checkpoint_every,
+            "progress_interval": progress_interval,
+            "resume": resume,
+            "request_extra_body": request_extra_body,
+        },
     )
+    _evaluation_command("eval", **values)
 
 
 @app.command("run")
 def run_command(
+    ctx: typer.Context,
     base_url: BaseUrl = None,
     api_key: ApiKey = None,
     model: Annotated[str | None, typer.Option("--model")] = None,
@@ -569,33 +635,38 @@ def run_command(
     progress_interval: Annotated[float, typer.Option("--progress-interval", min=0.1)] = 5.0,
     resume: Annotated[Path | None, typer.Option("--resume", exists=True, file_okay=False)] = None,
     request_extra_body: Annotated[str | None, typer.Option("--request-extra-body")] = None,
+    config: Annotated[Path | None, typer.Option("--config", exists=True, readable=True)] = None,
 ) -> None:
     """Evaluate answer quality under concurrent load."""
-    _evaluation_command(
-        "run",
-        base_url,
-        api_key,
-        model,
-        dataset,
-        limit,
-        sample,
-        concurrency,
-        temperature,
-        top_p,
-        max_tokens,
-        timeout,
-        retries,
-        retry_backoff,
-        n_samples,
-        seed,
-        stream,
-        output_dir,
-        memory_gb,
-        checkpoint_every,
-        progress_interval,
-        resume,
-        request_extra_body,
+    values = _merge_bench_config(
+        ctx,
+        config,
+        {
+            "base_url": base_url,
+            "api_key": api_key,
+            "model": model,
+            "dataset": dataset,
+            "limit": limit,
+            "sample": sample,
+            "concurrency": concurrency,
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_tokens": max_tokens,
+            "timeout": timeout,
+            "retries": retries,
+            "retry_backoff": retry_backoff,
+            "n_samples": n_samples,
+            "seed": seed,
+            "stream": stream,
+            "output_dir": output_dir,
+            "memory_gb": memory_gb,
+            "checkpoint_every": checkpoint_every,
+            "progress_interval": progress_interval,
+            "resume": resume,
+            "request_extra_body": request_extra_body,
+        },
     )
+    _evaluation_command("run", **values)
 
 
 @app.command("stress")
@@ -748,13 +819,31 @@ def compare_command(
     baseline: Annotated[Path, typer.Option("--baseline", exists=True, readable=True)],
     candidate: Annotated[Path, typer.Option("--candidate", exists=True, readable=True)],
     report: Annotated[Path, typer.Option("--report")] = Path("reports/compare.html"),
+    policy: Annotated[Path | None, typer.Option("--policy", exists=True, readable=True)] = None,
+    bootstrap_samples: Annotated[int, typer.Option("--bootstrap-samples", min=100)] = 10_000,
+    seed: Annotated[int, typer.Option("--seed")] = 42,
 ) -> None:
-    """Compare baseline and candidate summary.json files."""
-    base_summary = json.loads(baseline.read_text(encoding="utf-8"))
-    candidate_summary = json.loads(candidate.read_text(encoding="utf-8"))
-    comparison = compare_summaries(base_summary, candidate_summary)
+    """Compare paired baseline and candidate run directories."""
+    try:
+        comparison = compare_run_directories(
+            baseline,
+            candidate,
+            bootstrap_samples=bootstrap_samples,
+            seed=seed,
+        )
+        if policy is not None:
+            policy_result = evaluate_policy(comparison, load_yaml(policy))
+            comparison["policy"] = policy_result
+    except IncomparableRunsError as exc:
+        typer.echo(f"Incomparable runs: {exc}", err=True)
+        raise typer.Exit(code=3) from exc
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        typer.echo(f"Comparison infrastructure error: {exc}", err=True)
+        raise typer.Exit(code=4) from exc
     paths = write_comparison(report, comparison)
     typer.echo(f"Comparison written to {paths['html']}")
+    if comparison.get("policy") and not comparison["policy"]["passed"]:
+        raise typer.Exit(code=2)
 
 
 if __name__ == "__main__":

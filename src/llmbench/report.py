@@ -273,19 +273,23 @@ def compare_summaries(baseline: dict[str, Any], candidate: dict[str, Any]) -> di
 def comparison_markdown(comparison: dict[str, Any]) -> str:
     quality = comparison["quality"]
     performance = comparison["performance"]
+    overall_change = quality.get("sample_mean_change", quality.get("absolute_change"))
+    confidence = quality.get("confidence_interval") or {}
+    p95_change = performance.get("p95_latency_change", performance.get("p95_latency_reduction"))
     lines = [
         "# Quantization Regression Report",
         "",
         f"Baseline: `{comparison['baseline']['model']}` (`{comparison['baseline']['run_id']}`)",
         f"Candidate: `{comparison['candidate']['model']}` (`{comparison['candidate']['run_id']}`)",
         "",
-        f"Overall score change: {_fmt(quality['absolute_change'], percent=True)}",
-        f"Relative score change: {_fmt(quality['relative_change'], percent=True)}",
+        f"Sample mean change: {_fmt(overall_change, percent=True)}",
+        f"95% paired CI: {_fmt(confidence.get('lower'), percent=True)} to "
+        f"{_fmt(confidence.get('upper'), percent=True)}",
         f"Throughput change: {_fmt(performance['throughput_change'], percent=True)}",
         f"QPS change: {_fmt(performance['qps_change'], percent=True)}",
-        f"p95 latency reduction: {_fmt(performance['p95_latency_reduction'], percent=True)}",
+        f"p95 latency change: {_fmt(p95_change, percent=True)}",
         f"Error-rate change: {_fmt(performance['error_rate_change'], percent=True)}",
-        f"Memory reduction: {_fmt(performance['memory_reduction'], percent=True)}",
+        f"Memory reduction: {_fmt(performance.get('memory_reduction'), percent=True)}",
         "",
         "| Dataset | Baseline | Candidate | Absolute | Relative |",
         "|---|---:|---:|---:|---:|",
@@ -298,6 +302,15 @@ def comparison_markdown(comparison: dict[str, Any]) -> str:
             f"{_fmt(values['relative_change'], percent=True)} |"
         )
     lines.append("")
+    if comparison.get("policy"):
+        lines.extend(["## Regression policy", ""])
+        for gate in comparison["policy"]["gates"]:
+            marker = "PASS" if gate["passed"] else "FAIL"
+            lines.append(
+                f"- **{marker}** `{gate['gate']}`: actual={_fmt(gate['actual'])}, "
+                f"limit={_fmt(gate['limit'])}"
+            )
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -311,11 +324,18 @@ def write_comparison(output: Path, comparison: dict[str, Any]) -> dict[str, Path
     directory.mkdir(parents=True, exist_ok=True)
     json_path = directory / "compare.json"
     md_path = directory / "compare.md"
+    paired_path = directory / "paired_results.jsonl"
     markdown = comparison_markdown(comparison)
+    summary_payload = {key: value for key, value in comparison.items() if key != "paired_results"}
     json_path.write_text(
-        json.dumps(comparison, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        json.dumps(summary_payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
     )
     md_path.write_text(markdown, encoding="utf-8")
+    if comparison.get("paired_results") is not None:
+        with paired_path.open("w", encoding="utf-8") as handle:
+            for result in comparison["paired_results"]:
+                handle.write(json.dumps(result, ensure_ascii=False) + "\n")
     quality = comparison["quality"]
     performance = comparison["performance"]
     cards = "".join(
@@ -324,7 +344,13 @@ def write_comparison(output: Path, comparison: dict[str, Any]) -> dict[str, Path
         for label, value in [
             ("Baseline", comparison["baseline"]["model"]),
             ("Candidate", comparison["candidate"]["model"]),
-            ("Score change", _fmt(quality["absolute_change"], percent=True)),
+            (
+                "Score change",
+                _fmt(
+                    quality.get("sample_mean_change", quality.get("absolute_change")),
+                    percent=True,
+                ),
+            ),
             (
                 "Throughput change",
                 _fmt(performance["throughput_change"], percent=True),
@@ -341,4 +367,7 @@ pre{{white-space:pre-wrap;overflow:auto}}</style></head><body>
 <h1>Quantization Regression Report</h1>
 <div class="cards">{cards}</div><pre>{html.escape(markdown)}</pre></body></html>"""
     html_path.write_text(html_document, encoding="utf-8")
-    return {"json": json_path, "markdown": md_path, "html": html_path}
+    paths = {"json": json_path, "markdown": md_path, "html": html_path}
+    if comparison.get("paired_results") is not None:
+        paths["paired"] = paired_path
+    return paths

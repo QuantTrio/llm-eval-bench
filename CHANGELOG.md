@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2026-08-31
+
+- Add schema-v2 YAML run configuration with explicit CLI precedence.
+- Require comparison-compatible manifests and identical paired request keys.
+- Add question-level transitions and deterministic paired bootstrap confidence intervals.
+- Add YAML regression gates and stable CI exit codes.
+
 ## 0.2.0 - 2026-08-31
 
 - Raise the default evaluation output budget to 4096 tokens.
