@@ -287,6 +287,16 @@ export EXECUTOR_TASK_KEY=short-lived-secret
 llmbench executor smoke --image ghcr.io/quanttrio/llmbench-sandbox:1.0.1
 ```
 
+Public linux/amd64 Docker archives are also attached to the v1.0.1 GitHub Release. They can be
+used without GHCR package access:
+
+```bash
+gh release download v1.0.1 -R QuantTrio/llm-eval-bench --pattern '*.docker.tar*'
+sha256sum -c llmbench-sandbox-1.0.1-linux-amd64.docker.tar.sha256
+docker load -i llmbench-sandbox-1.0.1-linux-amd64.docker.tar
+docker load -i llmbench-executor-1.0.1-linux-amd64.docker.tar
+```
+
 Executor jobs run in allowlisted, read-only remote containers with CPU, memory, PID, output, and
 time limits. Network is disabled by default; enabled jobs join an internal-only network and use
 an allowlisted egress proxy. Temporary keys are held only for the task and redacted from stored

@@ -10,6 +10,9 @@ docker build -f executor/sandbox.Dockerfile -t ghcr.io/quanttrio/llmbench-sandbo
 docker compose -f executor/docker-compose.yml build
 ```
 
+For linux/amd64 deployments, the public v1.0.1 Release also provides Docker archives and matching
+`.sha256` files for `llmbench-sandbox` and `llmbench-executor`. Load them with `docker load -i`.
+
 The compose file expects a rootless Docker socket at `${XDG_RUNTIME_DIR}/docker.sock`. Put a TLS
 reverse proxy in front of port 8765. `POST /v1/jobs` is rejected over plain HTTP unless
 `allow_insecure: true` is explicitly selected for local development.

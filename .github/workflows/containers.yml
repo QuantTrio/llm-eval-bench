@@ -9,7 +9,7 @@ on:
         default: 1.0.1
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -41,10 +41,17 @@ jobs:
             ghcr.io/quanttrio/${{ matrix.image }}:latest
           sbom: true
           provenance: mode=max
-      - name: Make package public
+      - name: Export public Docker archive
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh api --method PATCH \
-            "orgs/QuantTrio/packages/container/${{ matrix.image }}" \
-            -f visibility=public
+          archive="/tmp/${{ matrix.image }}-${{ inputs.image_tag }}-linux-amd64.docker.tar"
+          docker buildx build \
+            --platform linux/amd64 \
+            --file "${{ matrix.dockerfile }}" \
+            --output "type=docker,name=ghcr.io/quanttrio/${{ matrix.image }}:${{ inputs.image_tag }},dest=$archive" \
+            .
+          cd /tmp
+          sha256sum "$(basename "$archive")" > "$(basename "$archive").sha256"
+          gh release upload "v${{ inputs.image_tag }}" \
+            "$archive" "$archive.sha256" --clobber
