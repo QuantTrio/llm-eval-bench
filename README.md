@@ -20,7 +20,10 @@ Or install the current `main` branch:
 python -m pip install git+https://github.com/QuantTrio/llm-eval-bench.git
 ```
 
-Python 3.10 or newer is required. No dataset is downloaded at install or runtime.
+The `py3-none-any` Release uses one wheel across all supported Python 3 versions, operating
+systems, and CPU architectures. v1.0.1 currently declares a Python 3.10 runtime floor; this is a
+source-language requirement rather than a wheel ABI or platform restriction. No dataset is
+downloaded at install or runtime.
 
 ## Quick start
 
@@ -156,6 +159,36 @@ redistributed publicly. It is one real wheel, not a dependency-only metapackage,
 `16/21` category coverage by itself. The remaining five packs must be built locally because of
 upstream licensing or mixed assets.
 
+### Included 16-dataset representative matrix
+
+The full wheel has 16 representative datasets available immediately after installation, covering
+16 of the 21 stable capability categories. Execution still requires the target shown in the table.
+Record counts are the packaged regression set or official complete set; they are not padded when
+an official set contains fewer than 100 records.
+
+| Category | Representative dataset | ID | Records | Required target | Native metric |
+|---|---|---|---:|---|---|
+| AI Agent - 信息收集 | BrowseComp | `browsecomp` | 100 | agent/browser | Judge accuracy |
+| AI Agent - 工具使用 | Terminal-Bench 2.0 | `terminal-bench-2` | 89 | agent/executor | success rate |
+| Agent 能力评测 | Aider Polyglot | `aider-polyglot` | 200 | agent/executor | pass rate@1 |
+| OpenClaw 综合能力 | PinchBench | `pinchbench` | 23 | agent/executor | success rate |
+| 代码能力 | HumanEval | `humaneval` | 100 | agent/executor | pass@1 |
+| 多模态理解 | MMMU | `mmmu` | 500 | multimodal | accuracy |
+| 常识推理 | SimpleBench | `simple-bench` | 10 | chat | accuracy |
+| 常识问答 | SimpleQA | `simpleqa` | 500 | chat + Judge | Judge accuracy |
+| 指令跟随 | IFBench | `ifbench` | 200 | chat/verifier | prompt loose accuracy |
+| 数学推理 | AIME 2025 | `aime-2025` | 30 | chat | exact match |
+| 文本向量检索 | MTEB retrieval mini | `mteb-retrieval-mini` | 500 | embedding | recall@1 |
+| 真实性评估 | TruthfulQA | `truthfulqa` | 200 | chat | accuracy |
+| 科学与综合推理 | GPQA Diamond | `gpqa-diamond` | 100 | chat | accuracy |
+| 综合能力 | AGIEval | `agieval` | 200 | chat | accuracy |
+| 长上下文能力 | LongBench v2 | `longbench-v2` | 200 | chat + Judge | accuracy |
+| 阅读理解 | DROP | `drop` | 500 | chat | token F1 |
+
+These 16 representatives contain 3,452 packaged records. The full wheel also includes MMLU-Pro,
+GSM8K, C-Eval, HellaSwag, and MMLU-Redux as supplementary general regression datasets; those five
+do not add new categories to the `16/21` capability coverage figure.
+
 ### Install the single full wheel
 
 The full wheel is about 235 MB compressed and contains about 492 MB of framework and data files;
@@ -192,10 +225,9 @@ quanttrio-llmbench-full==1.0.1
 Coverage: 16/21 categories
 ```
 
-The correct compatibility tag is `py3-none-any`, not `abi3`. llmbench is pure Python and contains
-no CPython extension module, so `py3-none-any` is the standards-compliant tag that allows the same
-wheel to run on Python 3.10+ across macOS and Linux. A truthful `abi3` wheel would require a binary
-limited-API extension and separate files for each operating-system platform.
+The `py3-none-any` compatibility tag means the same pure-Python wheel is used across all supported
+Python 3 minor versions and platforms. The current `Requires-Python: >=3.10` metadata records the
+runtime syntax baseline; it does not require a CPython-version-specific or platform-specific wheel.
 
 The five local-build-only packs are Creative Writing v3, MMEB-v2 Image, GDPval Gold,
 LiveCodeBench, and SuperGLUE. Their pinned builders are under `data-packs/` in the source archive.
