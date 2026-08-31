@@ -132,7 +132,7 @@ class DockerBackend:
                 stdout, stderr = await asyncio.wait_for(
                     process.communicate(), timeout=self.config.timeout_seconds
                 )
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 process.kill()
                 await process.communicate()
                 raise TimeoutError("executor task exceeded its time limit") from None

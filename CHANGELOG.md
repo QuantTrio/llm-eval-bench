@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 - 2026-08-31
+
+- Catch the Python 3.10-specific `asyncio.TimeoutError` in the executor timeout path while
+  preserving the stable public `TimeoutError` contract.
+
 ## 1.0.0 - 2026-08-31
 
 - Freeze the public CLI, YAML schema v2, report schema v2, and regression exit-code contract.

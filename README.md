@@ -10,7 +10,7 @@ raw responses plus JSON, Markdown, and HTML reports.
 Install the tagged release in one command:
 
 ```bash
-python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.0/quanttrio_llmbench-1.0.0-py3-none-any.whl"
+python -m pip install "quanttrio-llmbench @ https://github.com/QuantTrio/llm-eval-bench/releases/download/v1.0.1/quanttrio_llmbench-1.0.1-py3-none-any.whl"
 ```
 
 Or install the current `main` branch:
@@ -266,7 +266,7 @@ artifact errors.
 v1.0 freezes the documented CLI commands, YAML schema v2, report schema v2, comparison exit
 codes, and the 21-category capability matrix. Future 1.x releases may add optional fields and
 commands but will continue to read valid v1.0 artifacts. Data wheels are versioned independently;
-the v0.5.0 wheels published with the benchmark matrix remain compatible with core v1.0.0.
+the v0.5.0 wheels published with the benchmark matrix remain compatible with core v1.0.x.
 
 See [docs/STABLE_API.md](docs/STABLE_API.md) for the complete stability and deprecation policy.
 
