@@ -19,8 +19,13 @@ PACKAGE = Path(__file__).parent / "llmbench_data_hle"
 
 def main() -> None:
     token = os.environ.get("HF_TOKEN")
+    token_path = Path.home() / ".cache" / "huggingface" / "token"
+    if not token and token_path.exists():
+        token = token_path.read_text(encoding="utf-8").strip()
     if not token:
-        raise SystemExit("HF_TOKEN is required after accepting cais/hle dataset terms")
+        raise SystemExit(
+            "HF_TOKEN or ~/.cache/huggingface/token is required after accepting cais/hle terms"
+        )
     request = urllib.request.Request(SOURCE, headers={"Authorization": f"Bearer {token}"})
     with urllib.request.urlopen(request, timeout=300) as response:
         payload = response.read()
