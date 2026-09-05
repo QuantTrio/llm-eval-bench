@@ -5,6 +5,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
+from rich.text import Text
 from typer.testing import CliRunner
 
 from llmbench.cli import app
@@ -356,7 +357,7 @@ def test_new_runs_require_model_before_any_request(command, monkeypatch) -> None
     monkeypatch.setattr(httpx.AsyncClient, "request", unexpected_request)
     result = CliRunner().invoke(app, [command, "--base-url", "http://localhost:1/v1"])
     assert result.exit_code == 2
-    assert "--model MODEL_ID is required" in result.output
+    assert "--model MODEL_ID is required" in Text.from_ansi(result.output).plain
 
 
 def test_visible_cli_surface_is_three_commands() -> None:
@@ -512,7 +513,7 @@ def test_failed_evaluation_writes_report_and_exits_four(mock_server, tmp_path):
 def test_run_rejects_unused_load_flags_before_requests():
     result = CliRunner().invoke(app, ["run", "--model", "id", "--requests", "4"])
     assert result.exit_code == 2
-    assert "require --mode load" in result.output
+    assert "require --mode load" in Text.from_ansi(result.output).plain
 
 
 def test_load_fixed_request_count_disables_default_deadline(monkeypatch):

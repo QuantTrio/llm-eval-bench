@@ -7,6 +7,7 @@ import shlex
 from pathlib import Path
 
 import pytest
+from rich.text import Text
 from typer.testing import CliRunner
 
 from llmbench import data_packs
@@ -48,8 +49,9 @@ def test_readme_commands_and_options_exist() -> None:
     for command in commands:
         result = runner.invoke(app, [command[0], "--help"])
         assert result.exit_code == 0, result.output
+        visible = Text.from_ansi(result.output).plain
         for option in (part for part in command if part.startswith("--")):
-            assert option in result.output, f"README option {option} is unavailable: {command}"
+            assert option in visible, f"README option {option} is unavailable: {command}"
         if command[0] in {"run", "eval", "stress"} and "--resume" not in command:
             assert "--model" in command or "--config" in command, command
 

@@ -38,3 +38,5 @@ The first hosted CI run exposed a test-package import difference between `python
 and the `pytest` executable. Declaring `tests` as a package fixes both entry points.
 The exact CI command was reproduced in the clean export: 453 passed, 7 optional-data skips.
 This fix changes test collection only, not the published wheel's runtime or data.
+CLI output assertions additionally compare visible text after removing ANSI formatting,
+so hosted CI's forced-color terminal mode does not change test results.
