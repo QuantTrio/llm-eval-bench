@@ -1,5 +1,12 @@
 # Stable interfaces for llmbench 1.x
 
+This document records the historical 1.x contract. The current checkout is a 2.0 development
+preview; its changes and acceptance scope are in [MIGRATION.md](MIGRATION.md) and
+[API_COMPATIBILITY.md](API_COMPATIBILITY.md). Build the current root wheel for this preview;
+the v1 full-data bundle is not the installation artifact for the new CLI. The dev1 preview
+uses a single `llm-bench` wheel with bundled text/images and optional `[image]` dependencies;
+see the current migration guide before using these historical 1.x contracts.
+
 This document defines the compatibility contract for the 1.x release line. The command-line and
 artifact interfaces listed here are stable; internal Python modules are not a public SDK.
 
@@ -7,7 +14,7 @@ artifact interfaces listed here are stable; internal Python modules are not a pu
 
 The following command families and their documented options are stable:
 
-- `llmbench eval`, `llmbench run`, `llmbench stress`, and `llmbench sweep`
+- `llmbench eval`, `llmbench run`, and `llmbench stress` (which absorbed `llmbench sweep`)
 - `llmbench compare --baseline DIR --candidate DIR --policy POLICY`
 - `llmbench suite --config CONFIG`
 - `llmbench data list`, `llmbench data verify`, and `llmbench coverage`

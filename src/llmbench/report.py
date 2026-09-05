@@ -3,9 +3,11 @@ from __future__ import annotations
 import html
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any
 
+from .artifacts import RunArtifactWriter
 from .schemas import RequestResult
 
 
@@ -126,6 +128,7 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
         f"- Mode: `{summary['mode']}`",
         f"- Model: `{summary['model']}`",
         f"- Base URL: `{summary['base_url']}`",
+        f"- API: `{config.get('api', 'chat')}`",
         f"- Datasets: `{', '.join(config.get('datasets', [])) or 'stress'}`",
         f"- Concurrency: `{config['concurrency']}`",
         "",
@@ -135,6 +138,7 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
         f"- Composite score: {_fmt(quality.get('composite_score'), percent=True)}",
         f"- Quality valid: `{quality.get('quality_valid', True)}`",
         f"- Parse fail rate: {_fmt(quality.get('parse_fail_rate'), percent=True)}",
+        "- These are packaged evaluation samples, not full official benchmark scores.",
     ]
     if quality.get("pass_at_k") is not None:
         lines.extend(
@@ -202,12 +206,17 @@ def markdown_report(summary: dict[str, Any], *, title: str = "Model Benchmark Re
             f"- Failed requests: {performance['failed_requests']}",
             f"- QPS: {_fmt(performance['qps'])}",
             f"- Output tokens/s: {_fmt(performance['output_tokens_per_second'])}",
+            f"- Usage reported: {performance.get('usage_reported_requests', 'n/a')} requests",
+            f"- Reasoning tokens: {_fmt(performance.get('reasoning_tokens'))}",
             f"- Latency p95: {_fmt(p95_latency)} ms",
             f"- TTFT p95: {_fmt(performance['ttft_ms'].get('p95'))} ms",
             f"- TPOT p95: {_fmt(performance['tpot_ms'].get('p95'))} ms",
             f"- Error rate: {_fmt(performance['error_rate'], percent=True)}",
             f"- Timeout rate: {_fmt(performance['timeout_rate'], percent=True)}",
             f"- Truncated responses: {performance['truncated_responses']}",
+            "- TTFT measures the first answer text, excluding reasoning events.",
+            "- Token metrics use provider-reported counts; tokenizers differ across models.",
+            "- Missing usage or unavailable TPOT is reported as n/a, not zero.",
             f"- Truncation rate: {_fmt(performance.get('truncation_rate'), percent=True)}",
             "",
             "## Errors",
@@ -236,12 +245,13 @@ def html_report(
     performance = summary["performance"]
     cards = [
         (
-            "Sample mean",
+            "Sample mean (mixed metrics)",
             _fmt(quality.get("sample_mean_score", quality.get("mean_score")), percent=True),
         ),
         ("QPS", _fmt(performance.get("qps"))),
         ("Latency p95", f"{_fmt(performance['latency_ms'].get('p95'))} ms"),
         ("Error rate", _fmt(performance.get("error_rate"), percent=True)),
+        ("Quality valid", str(quality.get("quality_valid", False))),
     ]
     card_html = "".join(
         f'<div class="card"><span>{html.escape(label)}</span>'
@@ -273,6 +283,10 @@ def html_report(
             f"<strong>Prompt</strong><pre>{html.escape(result.prompt)}</pre>"
             f"<strong>Output</strong><pre>{html.escape(result.raw_output)}</pre>"
             f"<strong>Parsed</strong><pre>{html.escape(str(result.parsed_answer))}</pre>"
+            f"<strong>Request ID</strong><pre>{html.escape(result.request_id or 'n/a')}</pre>"
+            f"<strong>Error</strong><pre>{html.escape(result.error or 'none')}</pre>"
+            "<strong>Images</strong><pre>"
+            f"{html.escape(json.dumps(result.images, ensure_ascii=False))}</pre>"
             "</details></td></tr>"
         )
     return f"""<!doctype html>
@@ -322,12 +336,14 @@ def write_run_artifacts(
         "markdown": output_dir / "report.md",
         "html": output_dir / "report.html",
     }
-    paths["summary"].write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    with paths["raw"].open("w", encoding="utf-8") as handle:
+    RunArtifactWriter._atomic_json(paths["summary"], summary)
+    temporary_raw = paths["raw"].with_suffix(".jsonl.tmp")
+    with temporary_raw.open("w", encoding="utf-8") as handle:
         for result in results:
             handle.write(json.dumps(result.to_dict(), ensure_ascii=False) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary_raw, paths["raw"])
     paths["markdown"].write_text(markdown_report(summary), encoding="utf-8")
     paths["html"].write_text(html_report(summary, results), encoding="utf-8")
     return paths
@@ -424,7 +440,7 @@ def comparison_markdown(comparison: dict[str, Any]) -> str:
     confidence = quality.get("confidence_interval") or {}
     p95_change = performance.get("p95_latency_change", performance.get("p95_latency_reduction"))
     lines = [
-        "# Quantization Regression Report",
+        "# Model Evaluation Comparison",
         "",
         f"Baseline: `{comparison['baseline']['model']}` (`{comparison['baseline']['run_id']}`)",
         f"Candidate: `{comparison['candidate']['model']}` (`{comparison['candidate']['run_id']}`)",
@@ -525,14 +541,14 @@ def write_comparison(output: Path, comparison: dict[str, Any]) -> dict[str, Path
         for row in comparison.get("paired_results", [])
     )
     html_document = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width"><title>Quantization Regression Report</title>
+<meta name="viewport" content="width=device-width"><title>Model Evaluation Comparison</title>
 <style>body{{font:15px/1.55 system-ui,sans-serif;max-width:980px;margin:48px auto;padding:0 24px;
 background:#0b1020;color:#e8ecf5}}.cards{{display:grid;grid-template-columns:repeat(2,1fr);
 gap:12px}}.card,pre{{background:#141b2d;border:1px solid #25314d;border-radius:12px;padding:18px}}
 .card span{{display:block;color:#9aa7bd}}.card strong{{font-size:20px;color:#65d6c4}}
 pre{{white-space:pre-wrap;overflow:auto}}table{{width:100%;border-collapse:collapse;margin:20px 0}}
 th,td{{padding:7px;border-bottom:1px solid #25314d;text-align:left}}</style></head><body>
-<h1>Quantization Regression Report</h1>
+<h1>Model Evaluation Comparison</h1>
 <div class="cards">{cards}</div><h2>Paired question changes</h2>
 <table><thead><tr><th>Dataset</th><th>Question</th><th>Transition</th><th>Baseline</th>
 <th>Candidate</th><th>Baseline output</th><th>Candidate output</th></tr></thead>
@@ -564,7 +580,7 @@ def write_sweep_artifacts(output_dir: Path, payload: dict[str, Any]) -> dict[str
         performance = point["summary"]["performance"]
         lines.append(
             f"| {point['concurrency']} | {performance['total_requests']} | "
-            f"{performance['qps']:.2f} | {performance['output_tokens_per_second']:.2f} | "
+            f"{performance['qps']:.2f} | {_fmt(performance['output_tokens_per_second'])} | "
             f"{_fmt(performance['ttft_ms']['p95'])} | "
             f"{_fmt(performance['latency_ms']['p95'])} | "
             f"{performance['failed_requests']} |"

@@ -1,92 +1,52 @@
+"""Build the IFBench pack: 200 prompts balanced across instruction types."""
+
 from __future__ import annotations
 
-import hashlib
-import json
-import tempfile
-import urllib.request
-from collections import defaultdict, deque
+import sys
 from pathlib import Path
 
-import pyarrow.parquet as pq
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from packbuild import Pack, balanced, build, group_by, read_parquet
 
 REVISION = "2e8a48de45ff3bf41242f927254ca81b59ca3ae2"
 SOURCE = (
     "https://huggingface.co/datasets/allenai/IFBench_test/resolve/"
     f"{REVISION}/data/train-00000-of-00001.parquet"
 )
-PACKAGE = Path(__file__).parent / "llmbench_data_ifbench"
+
+PACK = Pack(
+    dataset="ifbench",
+    package="llmbench_data_ifbench",
+    revision=REVISION,
+    source=SOURCE,
+    type="instruction",
+    category="指令跟随",
+    metric="prompt_loose_accuracy",
+    license="ODC-By-1.0",
+    restriction="Ai2 Responsible Use and third-party output terms",
+    limit=200,
+    flags={"regression_subset": True},
+    item_metadata={"capability": "chat", "adapter": "official_verifier"},
+)
 
 
-def main() -> None:
-    with urllib.request.urlopen(SOURCE, timeout=60) as response:
-        payload = response.read()
-    with tempfile.NamedTemporaryFile(suffix=".parquet") as handle:
-        handle.write(payload)
-        handle.flush()
-        rows = pq.read_table(handle.name).to_pylist()
-    groups = defaultdict(deque)
-    for row in rows:
-        instruction_ids = row.get("instruction_id_list") or ["unknown"]
-        groups[str(instruction_ids[0])].append(row)
-    selected = []
-    while len(selected) < 200 and groups:
-        for name in sorted(list(groups)):
-            selected.append(groups[name].popleft())
-            if not groups[name]:
-                del groups[name]
-            if len(selected) == 200:
-                break
-    records = [
-        {
-            "id": f"ifbench-{row['key']}",
-            "dataset": "ifbench",
-            "type": "instruction",
-            "question": row["prompt"],
-            "answer": None,
-            "metadata": {
+def convert(pack: Pack) -> list[dict]:
+    groups = group_by(
+        read_parquet(SOURCE), lambda row: str((row.get("instruction_id_list") or ["unknown"])[0])
+    )
+    return [
+        pack.record(
+            id=f"ifbench-{row['key']}",
+            question=row["prompt"],
+            metadata={
                 "instruction_id_list": row.get("instruction_id_list") or [],
                 "kwargs": row.get("kwargs") or [],
-                "benchmark_category": "指令跟随",
-                "benchmark_metric": "prompt_loose_accuracy",
-                "capability": "chat",
-                "adapter": "official_verifier",
-                "recommended_max_tokens": 4096,
-                "regression_subset": True,
             },
-        }
-        for row in selected
+        )
+        for _name, row in balanced(groups, PACK.limit)
     ]
-    output = "".join(
-        json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n" for record in records
-    ).encode()
-    data_path = PACKAGE / "ifbench.jsonl"
-    data_path.write_bytes(output)
-    manifest = {
-        "name": "quanttrio-llmbench-data-ifbench",
-        "version": "0.5.0",
-        "package": "llmbench_data_ifbench",
-        "source_revision": REVISION,
-        "datasets": {
-            "ifbench": {
-                "file": "ifbench.jsonl",
-                "count": len(records),
-                "type": "instruction",
-                "category": "指令跟随",
-                "metric": "prompt_loose_accuracy",
-                "license": "ODC-By-1.0",
-                "restriction": "Ai2 Responsible Use and third-party output terms",
-                "source": SOURCE,
-                "sha256": hashlib.sha256(output).hexdigest(),
-                "recommended_max_tokens": 4096,
-                "regression_subset": True,
-            }
-        },
-    }
-    (PACKAGE / "pack.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    print(f"Wrote {len(records)} records to {data_path}")
 
 
 if __name__ == "__main__":
-    main()
+    build(PACK, convert, script=__file__)

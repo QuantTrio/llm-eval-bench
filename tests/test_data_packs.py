@@ -8,9 +8,9 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from llmbench import data_packs
-from llmbench.capabilities import BENCHMARK_CAPABILITIES, capability_matrix
+from llmbench.catalog import BENCHMARK_CAPABILITIES, capability_matrix, installed_datasets
 from llmbench.cli import app
-from llmbench.datasets import list_datasets, load_dataset
+from llmbench.datasets import load_dataset
 
 
 class EntryPoint:
@@ -62,7 +62,7 @@ def test_data_pack_discovery_loading_verification_and_cli(monkeypatch) -> None:
             "count_valid": True,
         }
     ]
-    assert any(item["name"] == "external-stress" for item in list_datasets())
+    assert any(item["name"] == "external-stress" for item in installed_datasets())
     assert len(load_dataset("external-stress")) == 10
 
     listed = CliRunner().invoke(app, ["data", "list"])
@@ -86,7 +86,7 @@ def test_empty_data_packs_and_category_coverage(monkeypatch) -> None:
     assert sum(row["installed"] for row in rows) == 3
     coverage = CliRunner().invoke(app, ["coverage"])
     assert coverage.exit_code == 0
-    assert "Coverage: 3/20 categories" in coverage.stdout
+    assert "Coverage: 4/20 categories" in coverage.stdout
 
 
 def test_consolidated_public_pack_manifest() -> None:

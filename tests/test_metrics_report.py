@@ -45,6 +45,7 @@ def result(
         error_type=None,
         http_status=None,
         attempts=1,
+        usage_available=True,
     )
 
 
@@ -132,3 +133,46 @@ def test_comparison_artifacts(tmp_path) -> None:
     payload = json.loads(paths["json"].read_text(encoding="utf-8"))
     assert payload["candidate"]["run_id"] == "candidate"
     assert "Memory reduction: 70.00%" in paths["markdown"].read_text(encoding="utf-8")
+
+
+def test_missing_usage_is_unknown_not_zero_throughput(tmp_path) -> None:
+    rows = [result("q1", 1), result("q2", 1)]
+    rows[1].usage_available = False
+    summary = make_summary(rows)
+    performance = summary["performance"]
+    assert performance["usage_reported_requests"] == 1
+    assert performance["usage_complete"] is False
+    assert performance["output_tokens_per_second"] is None
+    assert performance["input_tokens_per_second"] is None
+    assert performance["output_tokens"] is None
+    paths = write_run_artifacts(tmp_path, summary, rows)
+    assert "Output tokens/s: n/a" in paths["markdown"].read_text()
+
+
+def test_usage_includes_reported_reasoning_and_cached_counts() -> None:
+    rows = [result("q1", 1), result("q2", 1)]
+    for item in rows:
+        item.reasoning_tokens = 2
+        item.cached_input_tokens = 4
+    performance = make_summary(rows)["performance"]
+    assert performance["usage_complete"] is True
+    assert performance["output_tokens"] == 10
+    assert performance["output_tokens_per_second"] == 10
+    assert performance["reasoning_tokens"] == 4
+    assert performance["cached_input_tokens"] == 8
+
+
+def test_http_errors_and_missing_scores_cannot_claim_valid_quality() -> None:
+    item = result("q1", 0)
+    item.error = "service unavailable"
+    item.error_type = "http_503"
+    quality = make_summary([item])["quality"]
+    assert quality["quality_valid"] is False
+    assert quality["by_dataset"]["mmlu-pro"]["failed_samples"] == 1
+    assert make_summary([])["quality"]["quality_valid"] is False
+
+
+def test_parse_failure_threshold_invalidates_score() -> None:
+    rows = [result(f"q{i}", 0) for i in range(10)]
+    rows[0].parse_failed = True
+    assert make_summary(rows)["quality"]["quality_valid"] is False

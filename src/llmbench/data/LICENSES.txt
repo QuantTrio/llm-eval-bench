@@ -14,6 +14,11 @@ retain their upstream licenses:
 * TruthfulQA: Apache-2.0, sylinrl/TruthfulQA revision d71c110
 * DROP: Apache-2.0, OpenAI simple-evals DROP v0 development set
 * stress: Apache-2.0, original QuantTrio synthetic prompts
+* MMMU: Apache-2.0, MMMU/MMMU revision 98e6ac0
+  https://huggingface.co/datasets/MMMU/MMMU
+  500 validation samples, with exact PNG bytes stored as deduplicated resources.
+  Local open-answer scoring follows the upstream MMMU evaluator with documented
+  extraction adjustments; this is not the official full-dataset result.
 
 Complete source links, selection details, and license links are included in
 THIRD_PARTY_DATASETS.md in the source distribution and repository.

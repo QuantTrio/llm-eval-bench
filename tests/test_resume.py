@@ -5,6 +5,7 @@ import pytest
 from llmbench.artifacts import RunArtifactWriter
 from llmbench.runner import BenchmarkRunner
 from llmbench.schemas import CompletionResult, DatasetItem
+from llmbench.session import ResumeMismatch, RunSession
 
 
 class FakeClient:
@@ -119,3 +120,36 @@ async def test_missing_capability_is_unsupported_not_scored() -> None:
     results, _ = await make_runner().evaluate([item])
     assert results[0].error_type == "unsupported_capability"
     assert results[0].score is None
+
+
+def test_new_run_cannot_overwrite_existing_results(tmp_path) -> None:
+    raw = tmp_path / "raw_results.jsonl"
+    raw.write_text("existing evidence\n")
+    session = RunSession(tmp_path, mode="run")
+    with pytest.raises(ResumeMismatch, match="already contains"):
+        session.open({"run_id": "new"})
+    assert raw.read_text() == "existing evidence\n"
+    assert not (tmp_path / "run_manifest.json").exists()
+
+
+def test_manifest_fingerprint_includes_effective_prompt() -> None:
+    from llmbench.repro import build_run_manifest
+
+    item = DatasetItem(
+        id="q1", dataset="test", type="exact_match", question="First prompt", answer="42"
+    )
+    arguments = {
+        "run_id": "same",
+        "mode": "run",
+        "model": "explicit-model",
+        "base_url": "http://localhost/v1",
+        "config": {"api": "responses", "datasets": []},
+        "items": [item],
+        "n_samples": 1,
+    }
+    before = build_run_manifest(**arguments)
+    item.question = "Changed prompt with identical question ID"
+    after = build_run_manifest(**arguments)
+    assert before["fingerprint"] != after["fingerprint"]
+    assert before["question_keys_sha256"] == after["question_keys_sha256"]
+    assert before["prompts_sha256"] != after["prompts_sha256"]

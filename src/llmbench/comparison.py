@@ -72,6 +72,8 @@ def _comparison_payload(manifest: dict[str, Any]) -> dict[str, Any]:
             "memory_gb",
             "progress_interval",
             "checkpoint_every",
+            "provider",
+            "api_key_env",
         }
     }
     return {
@@ -79,6 +81,7 @@ def _comparison_payload(manifest: dict[str, Any]) -> dict[str, Any]:
         "config": config,
         "datasets": manifest.get("datasets"),
         "question_keys_sha256": manifest.get("question_keys_sha256"),
+        "prompts_sha256": manifest.get("prompts_sha256"),
         "request_count": manifest.get("request_count"),
     }
 
@@ -110,6 +113,10 @@ def compare_run_directories(
 ) -> dict[str, Any]:
     baseline = load_run(baseline_path)
     candidate = load_run(candidate_path)
+    for run in (baseline, candidate):
+        expected = run["manifest"].get("request_count")
+        if expected is not None and len(run["results"]) != expected:
+            raise IncomparableRunsError(f"run is incomplete: {run['directory']}")
     base_payload = _comparison_payload(baseline["manifest"])
     cand_payload = _comparison_payload(candidate["manifest"])
     if canonical_hash(base_payload) != canonical_hash(cand_payload):
@@ -138,6 +145,8 @@ def compare_run_directories(
     for key in sorted(base_by_key):
         base = base_by_key[key]
         cand = cand_by_key[key]
+        if base.prompt != cand.prompt:
+            raise IncomparableRunsError(f"prompt differs for request {key}")
         if base.metric != cand.metric or base.gold_answer != cand.gold_answer:
             raise IncomparableRunsError(f"metric or gold answer differs for request {key}")
         if base.score is None or cand.score is None:

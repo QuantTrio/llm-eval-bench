@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Collection
 from dataclasses import dataclass
 from importlib import metadata, resources
 from typing import Any
@@ -47,10 +48,19 @@ def discover_data_packs() -> list[dict[str, Any]]:
     return sorted(packs, key=lambda item: (item["name"], item["version"]))
 
 
-def external_dataset_resources() -> dict[str, DatasetResource]:
+def external_dataset_resources(
+    *, exclude_names: Collection[str] = ()
+) -> dict[str, DatasetResource]:
+    """Discover optional datasets, ignoring IDs already owned by the core wheel.
+
+    Filtering precedes duplicate detection so multiple legacy packs cannot shadow
+    a newly bundled dataset. Other external duplicates still fail explicitly.
+    """
     datasets: dict[str, DatasetResource] = {}
     for pack in discover_data_packs():
         for name, item in pack["datasets"].items():
+            if name in exclude_names:
+                continue
             if name in datasets:
                 raise ValueError(f"Dataset {name!r} is provided by multiple installed data packs")
             if not isinstance(item, dict) or "file" not in item:

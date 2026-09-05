@@ -59,3 +59,32 @@ class RemoteExecutorClient:
                 return job
             await asyncio.sleep(poll_interval)
         raise TimeoutError(f"executor job did not finish within {timeout} seconds: {job_id}")
+
+
+class SmokeFailed(RuntimeError):
+    """The executor accepted the smoke task but did not complete it."""
+
+    def __init__(self, job: dict[str, Any]) -> None:
+        super().__init__("executor smoke task did not complete")
+        self.job = job
+
+
+def smoke(executor_url: str, *, ephemeral_key: str, image: str, timeout: float) -> dict[str, Any]:
+    """Submit a safe task to a deployed executor and return its artifact."""
+
+    async def run() -> dict[str, Any]:
+        async with RemoteExecutorClient(executor_url, timeout=timeout) as client:
+            job = await client.submit(
+                {
+                    "image": image,
+                    "command": ["-c", "print('llmbench executor ok')"],
+                    "network": False,
+                },
+                ephemeral_key=ephemeral_key,
+            )
+            completed = await client.wait(job["id"], timeout=timeout)
+            if completed["status"] != "completed":
+                raise SmokeFailed(completed)
+            return await client.artifacts(job["id"])
+
+    return asyncio.run(run())

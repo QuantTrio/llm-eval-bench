@@ -16,6 +16,20 @@ class DatasetItem:
     messages: list[dict[str, Any]] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    @property
+    def is_image(self) -> bool:
+        if self.metadata.get("capability", "chat") not in {"chat", "multimodal"}:
+            return False
+        if self.metadata.get("capability") == "multimodal" or self.metadata.get("assets"):
+            return True
+        return any(
+            isinstance(block, dict) and block.get("type") in {"image_url", "image", "input_image"}
+            for message in self.messages or []
+            for block in (
+                message.get("content", []) if isinstance(message.get("content"), list) else []
+            )
+        )
+
     @classmethod
     def from_dict(cls, value: dict[str, Any], *, source: str = "custom") -> DatasetItem:
         required = ("id", "type", "question")
@@ -46,7 +60,12 @@ class CompletionResult:
     tpot_ms: float | None = None
     input_tokens: int = 0
     output_tokens: int = 0
+    reasoning_tokens: int | None = None
+    cached_input_tokens: int | None = None
+    usage_available: bool = False
     finish_reason: str | None = None
+    request_id: str | None = None
+    raw_response: dict[str, Any] | None = None
     error: str | None = None
     error_type: str | None = None
     http_status: int | None = None
@@ -85,13 +104,19 @@ class RequestResult:
     tpot_ms: float | None
     input_tokens: int
     output_tokens: int
-    finish_reason: str | None
     error: str | None
     error_type: str | None
     http_status: int | None
     attempts: int
+    reasoning_tokens: int | None = None
+    cached_input_tokens: int | None = None
+    usage_available: bool = False
+    finish_reason: str | None = None
+    request_id: str | None = None
+    raw_response: dict[str, Any] | None = None
     max_tokens: int | None = None
     attempt_latency_ms: float | None = None
+    images: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

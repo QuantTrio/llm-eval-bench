@@ -46,6 +46,8 @@ def summarize(
     unsupported = [result for result in results if result.error_type == "unsupported_capability"]
     supported = [result for result in results if result.error_type != "unsupported_capability"]
     successful = [result for result in supported if result.error is None]
+    measured = [result for result in successful if result.usage_available]
+    usage_complete = bool(successful) and len(measured) == len(successful)
     scored = [result for result in results if result.score is not None]
     latency = [result.latency_ms for result in successful]
     ttft = [result.ttft_ms for result in successful if result.ttft_ms is not None]
@@ -81,14 +83,19 @@ def summarize(
         grouped_metric[result.metric].append(result)
     for dataset, rows in sorted(grouped_dataset.items()):
         truncation_rate = sum(row.finish_reason == "length" for row in rows) / len(rows)
+        error_count = sum(row.error is not None for row in rows)
+        parse_fail_rate = sum(row.parse_failed for row in rows) / len(rows)
         quality["by_dataset"][dataset] = {
             "samples": len(rows),
             "questions": len({row.question_id for row in rows}),
             "metric": rows[0].metric,
             "score": mean(row.score or 0.0 for row in rows),
-            "parse_fail_rate": sum(row.parse_failed for row in rows) / len(rows),
+            "parse_fail_rate": parse_fail_rate,
+            "failed_samples": error_count,
             "truncation_rate": truncation_rate,
-            "quality_valid": truncation_rate <= 0.05,
+            "quality_valid": (
+                truncation_rate <= 0.05 and parse_fail_rate <= 0.05 and error_count == 0
+            ),
         }
     for category, rows in sorted(grouped_category.items()):
         dataset_scores = [
@@ -153,7 +160,7 @@ def summarize(
     invalid = [
         dataset for dataset, values in quality["by_dataset"].items() if not values["quality_valid"]
     ]
-    quality["quality_valid"] = not invalid
+    quality["quality_valid"] = bool(scored) and not invalid and not errors and not unsupported
     quality["invalid_datasets"] = invalid
 
     performance = {
@@ -165,15 +172,30 @@ def summarize(
         "elapsed_seconds": elapsed_seconds,
         "qps": len(supported) / elapsed_seconds if elapsed_seconds > 0 else 0.0,
         "successful_qps": len(successful) / elapsed_seconds if elapsed_seconds > 0 else 0.0,
+        "success_rate": len(successful) / len(supported) if supported else 0.0,
+        "usage_reported_requests": len(measured),
+        "usage_complete": usage_complete,
+        "input_tokens": sum(row.input_tokens for row in measured) if usage_complete else None,
+        "output_tokens": sum(row.output_tokens for row in measured) if usage_complete else None,
+        "reasoning_tokens": (
+            sum(row.reasoning_tokens or 0 for row in measured)
+            if usage_complete and all(row.reasoning_tokens is not None for row in measured)
+            else None
+        ),
+        "cached_input_tokens": (
+            sum(row.cached_input_tokens or 0 for row in measured)
+            if usage_complete and all(row.cached_input_tokens is not None for row in measured)
+            else None
+        ),
         "input_tokens_per_second": (
-            sum(row.input_tokens for row in successful) / elapsed_seconds
-            if elapsed_seconds > 0
-            else 0.0
+            sum(row.input_tokens for row in measured) / elapsed_seconds
+            if elapsed_seconds > 0 and usage_complete
+            else None
         ),
         "output_tokens_per_second": (
-            sum(row.output_tokens for row in successful) / elapsed_seconds
-            if elapsed_seconds > 0
-            else 0.0
+            sum(row.output_tokens for row in measured) / elapsed_seconds
+            if elapsed_seconds > 0 and usage_complete
+            else None
         ),
         "error_rate": ((len(supported) - len(successful)) / len(supported) if supported else 0.0),
         "timeout_rate": errors.get("timeout", 0) / len(supported) if supported else 0.0,

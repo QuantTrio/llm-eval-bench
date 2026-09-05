@@ -3,17 +3,17 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "quanttrio-llmbench"
-version = "1.0.1"
-description = "Offline-ready quality and concurrency benchmarks for OpenAI-compatible LLM APIs"
+name = "llm-bench"
+version = "2.0.0.dev1"
+description = "Independent model evaluation for hosted and local APIs"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "Apache-2.0"
-license-files = ["LICENSE"]
+license = "Apache-2.0 AND MIT AND CC-BY-4.0 AND CC-BY-NC-SA-4.0"
+license-files = ["LICENSE", "THIRD_PARTY_DATASETS.md", "src/llmbench/data/LICENSES.txt"]
 authors = [{ name = "QuantTrio" }]
-keywords = ["llm", "benchmark", "evaluation", "quantization", "openai-compatible"]
+keywords = ["llm", "benchmark", "evaluation", "responses", "openai-compatible"]
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
+  "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -28,6 +28,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+image = ["pillow>=10.4,<13"]
 dev = [
   "build>=1.2",
   "fastapi>=0.115,<1",
@@ -36,6 +37,7 @@ dev = [
   "pytest-cov>=5,<7",
   "ruff>=0.6,<1",
   "uvicorn>=0.30,<1",
+  "pillow>=10.4,<13",
 ]
 data = ["pyarrow>=17,<24"]
 executor = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1"]
@@ -56,7 +58,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-llmbench = ["data/**/*.jsonl", "data/**/*.json", "data/**/*.txt", "schema/*.json"]
+llmbench = ["data/**/*.jsonl", "data/**/*.json", "data/**/*.txt", "data/images/**/*.png", "schema/*.json"]
 
 [tool.pytest.ini_options]
 addopts = "-q --strict-markers"

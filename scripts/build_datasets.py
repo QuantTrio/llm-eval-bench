@@ -396,7 +396,11 @@ def main() -> None:
         "drop": ("Apache-2.0", None, "f1", "Reading Comprehension"),
         "stress": ("Apache-2.0", None, "stress", "Performance"),
     }
-    manifest: dict[str, Any] = {}
+    manifest_path = DATA_DIR / "manifest.json"
+    # Independently bundled datasets (e.g. images) survive a text-only rebuild.
+    manifest: dict[str, Any] = (
+        json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    )
     for name, builder in builders.items():
         rows, source = builder()
         checksum = write_jsonl(name, rows)

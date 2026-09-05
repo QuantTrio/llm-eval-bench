@@ -1,41 +1,41 @@
+"""Build the SuperGLUE pack: 500 items balanced across its six tasks."""
+
 from __future__ import annotations
 
-import hashlib
-import json
-import tempfile
-import time
-import urllib.request
-from collections import defaultdict, deque
+import sys
 from pathlib import Path
 
-import pyarrow.parquet as pq
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from collections import deque
+
+from packbuild import Pack, balanced, build, read_parquet
 
 REVISION = "5234c61e804e85e5994b14b002fa9ec34487bcfb"
-CONFIGS = ("boolq", "cb", "copa", "rte", "wic", "wsc.fixed")
 ROOT = f"https://huggingface.co/datasets/aps/super_glue/resolve/{REVISION}"
-PACKAGE = Path(__file__).parent / "llmbench_data_superglue"
+CONFIGS = ("boolq", "cb", "copa", "rte", "wic", "wsc.fixed")
+
+PACK = Pack(
+    dataset="superglue",
+    package="llmbench_data_superglue",
+    revision=REVISION,
+    source=ROOT,
+    type="multiple_choice",
+    category="自然语言理解",
+    metric="accuracy",
+    license="LicenseRef-SuperGLUE-Mixed",
+    restriction="local build only",
+    limit=500,
+    flags={"regression_subset": True},
+)
 
 
-def download(url: str) -> bytes:
-    error = None
-    for attempt in range(5):
-        try:
-            with urllib.request.urlopen(url, timeout=120) as response:
-                return response.read()
-        except OSError as exc:
-            error = exc
-            time.sleep(2**attempt)
-    raise RuntimeError(f"failed to download after retries: {url}: {error}")
-
-
-def convert(config: str, row: dict) -> tuple[str, dict[str, str], str]:
+def _question(config: str, row: dict) -> tuple[str, dict[str, str], str]:
+    """Each SuperGLUE task phrases its own prompt; the label is always an index."""
     label = int(row["label"])
+    boolean = {"A": "False", "B": "True"}
     if config == "boolq":
-        return (
-            f"Passage: {row['passage']}\nQuestion: {row['question']}",
-            {"A": "False", "B": "True"},
-            "B" if label else "A",
-        )
+        return f"Passage: {row['passage']}\nQuestion: {row['question']}", boolean, "BA"[not label]
     if config == "cb":
         return (
             f"Premise: {row['premise']}\nHypothesis: {row['hypothesis']}",
@@ -55,82 +55,38 @@ def convert(config: str, row: dict) -> tuple[str, dict[str, str], str]:
             chr(65 + label),
         )
     if config == "wic":
-        question = (
+        return (
             f"Word: {row['word']}\nSentence 1: {row['sentence1']}\n"
-            f"Sentence 2: {row['sentence2']}\nDoes the word have the same meaning?"
+            f"Sentence 2: {row['sentence2']}\nDoes the word have the same meaning?",
+            boolean,
+            "BA"[not label],
         )
-        return question, {"A": "False", "B": "True"}, "B" if label else "A"
-    question = f"Text: {row['text']}\nDoes '{row['span2_text']}' refer to '{row['span1_text']}'?"
-    return question, {"A": "False", "B": "True"}, "B" if label else "A"
-
-
-def main() -> None:
-    groups = defaultdict(deque)
-    for config in CONFIGS:
-        path = f"{config}/validation-00000-of-00001.parquet"
-        payload = download(f"{ROOT}/{path}")
-        with tempfile.NamedTemporaryFile(suffix=".parquet") as handle:
-            handle.write(payload)
-            handle.flush()
-            groups[config].extend(pq.read_table(handle.name).to_pylist())
-    selected = []
-    while len(selected) < 500 and groups:
-        for config in sorted(list(groups)):
-            selected.append((config, groups[config].popleft()))
-            if not groups[config]:
-                del groups[config]
-            if len(selected) == 500:
-                break
-    records = []
-    for index, (config, row) in enumerate(selected):
-        question, choices, answer = convert(config, row)
-        records.append(
-            {
-                "id": f"superglue-{config}-{index:04d}",
-                "dataset": "superglue",
-                "subset": config,
-                "type": "multiple_choice",
-                "question": question,
-                "choices": choices,
-                "answer": answer,
-                "metadata": {
-                    "benchmark_category": "自然语言理解",
-                    "benchmark_metric": "accuracy",
-                    "recommended_max_tokens": 4096,
-                    "regression_subset": True,
-                },
-            }
-        )
-    output = "".join(
-        json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n" for row in records
-    ).encode()
-    (PACKAGE / "superglue.jsonl").write_bytes(output)
-    manifest = {
-        "name": "quanttrio-llmbench-data-superglue",
-        "version": "0.5.0",
-        "package": "llmbench_data_superglue",
-        "source_revision": REVISION,
-        "datasets": {
-            "superglue": {
-                "file": "superglue.jsonl",
-                "count": len(records),
-                "type": "multiple_choice",
-                "category": "自然语言理解",
-                "metric": "accuracy",
-                "license": "LicenseRef-SuperGLUE-Mixed",
-                "restriction": "local build only",
-                "source": ROOT,
-                "sha256": hashlib.sha256(output).hexdigest(),
-                "recommended_max_tokens": 4096,
-                "regression_subset": True,
-            }
-        },
-    }
-    (PACKAGE / "pack.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    return (
+        f"Text: {row['text']}\nDoes '{row['span2_text']}' refer to '{row['span1_text']}'?",
+        boolean,
+        "BA"[not label],
     )
-    print(f"Wrote {len(records)} local-only records")
+
+
+def convert(pack: Pack) -> list[dict]:
+    groups = {
+        config: deque(read_parquet(f"{ROOT}/{config}/validation-00000-of-00001.parquet"))
+        for config in CONFIGS
+    }
+    records = []
+    for index, (config, row) in enumerate(balanced(groups, PACK.limit)):
+        question, choices, answer = _question(config, row)
+        records.append(
+            pack.record(
+                id=f"superglue-{config}-{index:04d}",
+                subset=config,
+                question=question,
+                choices=choices,
+                answer=answer,
+            )
+        )
+    return records
 
 
 if __name__ == "__main__":
-    main()
+    build(PACK, convert, script=__file__, noun="local-only records")

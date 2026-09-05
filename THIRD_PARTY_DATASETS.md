@@ -14,6 +14,7 @@ records. Each generated JSONL file is a format conversion and subset of the name
 | `truthfulqa.jsonl` | sylinrl/TruthfulQA `d71c110` | Apache-2.0 | First 200 MC1 records. |
 | `drop.jsonl` | OpenAI simple-evals DROP v0 dev | Apache-2.0 | First 500 preprocessed development records. |
 | `stress.jsonl` | QuantTrio | Apache-2.0 | Synthetic prompts written for this project. |
+| `mmmu.jsonl` and `images/mmmu/*.png` | MMMU/MMMU `98e6ac0` | Apache-2.0 | Existing 500-record validation subset; 476 choice questions and 24 open questions. PNG bytes preserved and deduplicated into 535 images (541 references). |
 
 License texts and sources:
 
@@ -24,8 +25,15 @@ License texts and sources:
   <https://creativecommons.org/licenses/by-nc-sa/4.0/>
 - C-Eval data license: <https://github.com/hkust-nlp/ceval/blob/main/LICENSE-DATA>
 - GPQA dataset license: <https://github.com/idavidrein/gpqa/blob/main/dataset.zip>
+- MMMU dataset: <https://huggingface.co/datasets/MMMU/MMMU>
+- MMMU evaluation rules: <https://github.com/MMMU-Benchmark/MMMU/blob/main/mmmu/utils/eval_utils.py>
+
+MMMU open answers use a local scorer based on the upstream normalization and candidate-matching
+rules. It additionally excludes hidden thinking, preserves deterministic candidate order, and
+extracts complete grouped/scientific numbers. Scores on this packaged subset are not claimed to
+reproduce the official full-dataset evaluation. Data conversion only decodes existing base64 PNGs;
+no image resizing, pixel changes, or extra records are introduced.
 
 Attribution and citation information remains available from each upstream project. Users are
 responsible for ensuring their intended use satisfies all applicable dataset terms, particularly
 the C-Eval non-commercial restriction.
-

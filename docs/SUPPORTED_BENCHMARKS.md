@@ -16,7 +16,7 @@ part of the executable/stable coverage contract.
 | 多模态理解 | MMMU | large wheel | multimodal |
 | 常识推理 | SimpleBench public | wheel | chat |
 | 常识问答 | SimpleQA | wheel | chat + Judge |
-| 指令跟随 | IFBench | wheel | official verifier |
+| 指令跟随 | IFBench | wheel | official verifier (not yet routed — see below) |
 | 数学推理 | AIME 2025 | wheel | chat |
 | 生产力知识 | GDPval gold | local-build descriptor | agent + Judge |
 | 真实性评估 | TruthfulQA | core | chat |
@@ -26,6 +26,11 @@ part of the executable/stable coverage contract.
 | 自然语言理解 | SuperGLUE | local-build wheel | chat |
 | 长上下文能力 | LongBench v2 | large wheel | chat |
 | 阅读理解 | DROP | core | chat |
+
+IFBench records declare the `official_verifier` adapter, which `CapabilityRunner` does not route
+yet. The pack installs and `llmbench coverage` counts it as installed, but `llmbench suite` reports
+its records as `unsupported_capability` and leaves them unscored — the same honest treatment as a
+missing target, not a silent zero.
 
 Run `llmbench coverage` to inspect installation readiness and `llmbench data verify` to validate
 every installed wheel's count and SHA256.

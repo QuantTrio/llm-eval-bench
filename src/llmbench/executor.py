@@ -309,3 +309,39 @@ def create_executor_app(config: ExecutorConfig, backend: ExecutorBackend | None 
         return record.artifact or {}
 
     return app
+
+
+def serve(config_path: Path, *, host: str | None = None, port: int | None = None) -> None:
+    """Start the executor API from a YAML deployment config."""
+    try:
+        import uvicorn
+    except ImportError as exc:
+        raise RuntimeError("install quanttrio-llmbench[executor]") from exc
+    from .config import load_yaml
+
+    payload = load_yaml(config_path)
+    values = payload.get("executor") or payload
+    images = values.get("allowed_images") or []
+    if not isinstance(images, list) or not images:
+        raise ValueError("executor config requires allowed_images")
+    config = ExecutorConfig(
+        allowed_images={str(image) for image in images},
+        work_dir=Path(values.get("work_dir") or ".llmbench-executor"),
+        allow_insecure=bool(values.get("allow_insecure", False)),
+        allow_network=bool(values.get("allow_network", False)),
+        network_name=values.get("network_name"),
+        network_proxy=values.get("network_proxy"),
+        allowed_domains=tuple(str(item) for item in values.get("allowed_domains", [])),
+        docker_bin=str(values.get("docker_bin") or "docker"),
+        cpus=float(values.get("cpus", 1.0)),
+        memory=str(values.get("memory") or "2g"),
+        pids_limit=int(values.get("pids_limit", 128)),
+        timeout_seconds=float(values.get("timeout_seconds", 300)),
+        output_limit_bytes=int(values.get("output_limit_bytes", 1_000_000)),
+    )
+    uvicorn.run(
+        create_executor_app(config),
+        host=host or str(values.get("host") or "127.0.0.1"),
+        port=port or int(values.get("port") or 8765),
+        proxy_headers=True,
+    )

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import time
+from pathlib import Path
 from typing import Any
 
 from .adapters import (
@@ -9,11 +12,17 @@ from .adapters import (
     multimodal_messages,
     score_embedding_item,
 )
+from .catalog import capability_matrix
 from .client import OpenAICompatibleClient
+from .config import load_bench_config, secret_from_env
+from .datasets import load_many
 from .executor_client import RemoteExecutorClient
-from .runner import BenchmarkRunner
+from .repro import build_run_manifest
+from .runner import BenchmarkRunner, default_output_dir
+from .runspec import SpecError
 from .schemas import DatasetItem, RequestResult
 from .scoring import build_messages, build_prompt, score_output
+from .session import RunSession
 
 
 class CapabilityRunner(BenchmarkRunner):
@@ -455,3 +464,185 @@ class CapabilityRunner(BenchmarkRunner):
             max_tokens=self._max_tokens(item),
             attempt_latency_ms=attempt_latency_ms,
         )
+
+
+def run_suite(
+    config_path: Path,
+    *,
+    dataset: tuple[str, ...] | None = None,
+    limit: int | None = None,
+    output_dir: Path | None = None,
+) -> tuple[dict[str, Any], dict[str, Path]]:
+    """Run installed representative benchmarks through capability-specific targets."""
+    try:
+        configuration = load_bench_config(config_path)
+    except ValueError as exc:
+        raise SpecError(str(exc)) from exc
+    targets = configuration.get("targets") or {}
+    if not (targets.get("chat") or {}).get("base_url"):
+        raise SpecError("suite requires targets.chat.base_url")
+    run_config = configuration.get("run") or {}
+    datasets = list(dataset) if dataset else _installed_representatives()
+    if not datasets:
+        raise SpecError("suite has no installed representative datasets")
+    selected_limit = limit or int(run_config.get("limit_per_dataset") or 100)
+    items = load_many(
+        datasets,
+        limit_per_dataset=selected_limit,
+        sample=None,
+        seed=int(run_config.get("seed", 42)),
+    )
+    directory = output_dir or Path(run_config.get("output_dir") or default_output_dir("suite"))
+    return asyncio.run(_run_suite(configuration, items, datasets, selected_limit, directory))
+
+
+def _installed_representatives() -> list[str]:
+    return [row["dataset_id"] for row in capability_matrix() if row["installed"]]
+
+
+async def _open_target(
+    stack: contextlib.AsyncExitStack, values: dict[str, Any], run_config: dict[str, Any]
+) -> tuple[OpenAICompatibleClient | None, str | None]:
+    """Open one configured endpoint; an unconfigured target stays absent, not broken."""
+    if not values.get("base_url"):
+        return None, None
+    client = await stack.enter_async_context(
+        OpenAICompatibleClient(
+            base_url=str(values["base_url"]),
+            api_key=secret_from_env(values.get("api_key_env")) or "EMPTY",
+            timeout=float(values.get("timeout", run_config.get("timeout", 300))),
+            retries=int(values.get("retries", run_config.get("retries", 2))),
+        )
+    )
+    model = values.get("model")
+    if model is None:
+        model, _ = await client.resolve_model(None)
+    return client, str(model)
+
+
+async def _run_suite(
+    configuration: dict[str, Any],
+    items: list[DatasetItem],
+    datasets: list[str],
+    limit: int,
+    directory: Path,
+) -> tuple[dict[str, Any], dict[str, Path]]:
+    targets = configuration.get("targets") or {}
+    run_config = configuration.get("run") or {}
+    judge_config = configuration.get("judge") or {}
+    agent = targets.get("agent") or {}
+    async with contextlib.AsyncExitStack() as stack:
+
+        async def target(name: str):
+            return await _open_target(stack, targets.get(name) or {}, run_config)
+
+        chat_client, chat_model = await target("chat")
+        if chat_client is None or chat_model is None:
+            raise SpecError("suite requires a usable chat target")
+        multimodal_client, multimodal_model = await target("multimodal")
+        embedding_client, embedding_model = await target("embedding")
+        judge_client, judge_model = await target("judge")
+        if judge_client is None and judge_config.get("base_url"):
+            judge_client, judge_model = await _open_target(stack, judge_config, run_config)
+        executor_client = None
+        executor_key = None
+        if agent.get("executor_url"):
+            executor_client = await stack.enter_async_context(
+                RemoteExecutorClient(
+                    str(agent["executor_url"]), timeout=float(agent.get("timeout", 600))
+                )
+            )
+            executor_key = secret_from_env(agent.get("ephemeral_key_env"))
+
+        runner = CapabilityRunner(
+            chat_client=chat_client,
+            chat_model=chat_model,
+            multimodal_client=multimodal_client,
+            multimodal_model=multimodal_model,
+            embedding_client=embedding_client,
+            embedding_model=embedding_model,
+            judge_client=judge_client,
+            judge_model=judge_model,
+            judge_repeats=int(judge_config.get("repeats", 3)),
+            executor_client=executor_client,
+            executor_key=executor_key,
+            executor_image=agent.get("image"),
+            concurrency=int(run_config.get("concurrency", 16)),
+            temperature=float(run_config.get("temperature", 0)),
+            top_p=float(run_config.get("top_p", 1)),
+            max_tokens=run_config.get("max_tokens"),
+            stream=bool(run_config.get("stream", True)),
+            seed=int(run_config.get("seed", 42)),
+            request_extra_body=dict(run_config.get("request_extra_body") or {}),
+        )
+        config = _suite_config(runner, targets, datasets, limit, run_config)
+        session = RunSession(
+            directory,
+            mode="suite",
+            checkpoint_every=int(run_config.get("checkpoint_every", 1)),
+            progress_interval=float(run_config.get("progress_interval", 5)),
+        )
+        manifest = build_run_manifest(
+            run_id=runner.run_id,
+            mode="suite",
+            model=chat_model,
+            base_url=str(targets["chat"]["base_url"]),
+            config=config,
+            items=items,
+            n_samples=1,
+        )
+        manifest["target_capabilities"] = sorted(targets)
+        session.open(manifest)
+        results, elapsed = await runner.evaluate(items, on_result=session.on_result)
+        return session.close(
+            results,
+            elapsed=elapsed,
+            run_id=runner.run_id,
+            model=chat_model,
+            base_url=str(targets["chat"]["base_url"]),
+            config=config,
+            extra_summary={"coverage": _coverage(results)},
+        )
+
+
+def _suite_config(
+    runner: CapabilityRunner,
+    targets: dict[str, Any],
+    datasets: list[str],
+    limit: int,
+    run_config: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "datasets": datasets,
+        "limit_per_dataset": limit,
+        "sample": None,
+        "concurrency": runner.concurrency,
+        "temperature": runner.temperature,
+        "top_p": runner.top_p,
+        "max_tokens": runner.max_tokens,
+        "timeout": run_config.get("timeout", 300),
+        "retries": run_config.get("retries", 2),
+        "retry_backoff": run_config.get("retry_backoff", 2),
+        "n_samples": 1,
+        "seed": runner.seed,
+        "stream": runner.stream,
+        "request_extra_body": run_config.get("request_extra_body") or {},
+        "target_capabilities": sorted(targets),
+        "judge_repeats": runner.judge_repeats,
+    }
+
+
+def _coverage(results: list[RequestResult]) -> dict[str, Any]:
+    """A category the target cannot serve is reported as missing, never as a wrong answer."""
+    requested = {result.benchmark_category for result in results}
+    supported = {
+        result.benchmark_category
+        for result in results
+        if result.error_type != "unsupported_capability"
+    }
+    return {
+        "requested_categories": sorted(requested),
+        "supported_categories": sorted(supported),
+        "unsupported_categories": sorted(requested - supported),
+        "ratio": len(supported) / len(requested) if requested else 0,
+    }

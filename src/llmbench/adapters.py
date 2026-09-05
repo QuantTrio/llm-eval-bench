@@ -4,31 +4,15 @@ import base64
 import hashlib
 import json
 import math
-import mimetypes
 import re
 from dataclasses import dataclass
-from importlib import resources
-from pathlib import Path
 from statistics import mean, pstdev
 from typing import Any
 
 from .client import OpenAICompatibleClient
+from .images import asset_data_url as asset_data_url
+from .images import prepare_image_messages
 from .schemas import DatasetItem
-
-
-def _asset_bytes(item: DatasetItem, asset: str) -> bytes:
-    package = item.metadata.get("resource_package")
-    if package:
-        return resources.files(str(package)).joinpath(asset).read_bytes()
-    return Path(asset).expanduser().read_bytes()
-
-
-def asset_data_url(item: DatasetItem, asset: str) -> str:
-    if asset.startswith("data:"):
-        return asset
-    mime = mimetypes.guess_type(asset)[0] or "application/octet-stream"
-    encoded = base64.b64encode(_asset_bytes(item, asset)).decode("ascii")
-    return f"data:{mime};base64,{encoded}"
 
 
 def decrypt_browsecomp(ciphertext: str, canary: str) -> str:
@@ -39,15 +23,7 @@ def decrypt_browsecomp(ciphertext: str, canary: str) -> str:
 
 
 def multimodal_messages(item: DatasetItem) -> list[dict[str, Any]]:
-    content: list[dict[str, Any]] = [{"type": "text", "text": item.question}]
-    for asset in item.metadata.get("assets") or []:
-        mime = mimetypes.guess_type(str(asset))[0] or "application/octet-stream"
-        if not mime.startswith("image/"):
-            raise ValueError(f"unsupported multimodal asset type: {mime}")
-        content.append(
-            {"type": "image_url", "image_url": {"url": asset_data_url(item, str(asset))}}
-        )
-    return [{"role": "user", "content": content}]
+    return prepare_image_messages(item)[0]
 
 
 def cosine_similarity(left: list[float], right: list[float]) -> float:

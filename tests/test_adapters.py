@@ -23,20 +23,25 @@ from llmbench.schemas import DatasetItem
 
 
 def test_multimodal_assets_and_humaneval_payload(tmp_path) -> None:
+    pillow = pytest.importorskip("PIL.Image")
     image = tmp_path / "image.png"
-    image.write_bytes(b"png")
+    pillow.new("RGB", (2, 3), "white").save(image)
     item = DatasetItem(
         id="mm",
         dataset="mmmu",
         type="multiple_choice",
         question="What is shown?",
         answer="A",
+        choices={"A": "A blank image", "B": "A cat"},
         metadata={"assets": [str(image)]},
     )
     assert asset_data_url(item, str(image)).startswith("data:image/png;base64,")
-    assert asset_data_url(item, "data:image/png;base64,cG5n") == "data:image/png;base64,cG5n"
+    url = asset_data_url(item, str(image))
+    assert asset_data_url(item, url) == url
     messages = multimodal_messages(item)
     assert messages[0]["content"][1]["type"] == "image_url"
+    assert "A. A blank image" in messages[0]["content"][0]["text"]
+    assert "Return JSON" in messages[0]["content"][0]["text"]
 
     code = DatasetItem(
         id="HumanEval/0",
@@ -57,7 +62,7 @@ def test_multimodal_assets_and_humaneval_payload(tmp_path) -> None:
     document = tmp_path / "document.pdf"
     document.write_bytes(b"pdf")
     item.metadata["assets"] = [str(document)]
-    with pytest.raises(ValueError, match="unsupported multimodal"):
+    with pytest.raises(ValueError, match="invalid image"):
         multimodal_messages(item)
     with pytest.raises(ValueError, match="same non-zero"):
         cosine_similarity([1], [1, 2])

@@ -3,26 +3,10 @@ schema_version: 2
 targets:
   chat:
     base_url: http://127.0.0.1:8000/v1
+    api: chat
     model: local-model
-    api_key_env: CHAT_API_KEY
-  multimodal:
-    base_url: http://127.0.0.1:8000/v1
-    model: local-vision-model
-    api_key_env: MULTIMODAL_API_KEY
-  embedding:
-    base_url: http://127.0.0.1:8001/v1
-    model: local-embedding-model
-    api_key_env: EMBEDDING_API_KEY
-  agent:
-    executor_url: https://executor.example.com
-    ephemeral_key_env: EXECUTOR_TASK_KEY
-    image: quanttrio/llmbench-sandbox:1.0.1
-
-judge:
-  base_url: http://127.0.0.1:8002/v1
-  model: judge-model
-  api_key_env: JUDGE_API_KEY
-  repeats: 3
+    # Optional for authenticated endpoints:
+    # api_key_env: LLMBENCH_API_KEY
 
 run:
   datasets:

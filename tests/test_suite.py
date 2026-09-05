@@ -28,8 +28,10 @@ class FakeExecutor:
 
 @pytest.mark.asyncio
 async def test_capability_runner_routes_all_core_adapters(tmp_path) -> None:
+    from PIL import Image
+
     image = tmp_path / "image.png"
-    image.write_bytes(b"png")
+    Image.new("RGB", (2, 2), "white").save(image)
     document = tmp_path / "document.pdf"
     document.write_bytes(b"pdf")
 

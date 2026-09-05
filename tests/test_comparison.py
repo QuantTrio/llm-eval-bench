@@ -142,3 +142,41 @@ def test_cli_policy_failure_is_exit_two(tmp_path) -> None:
     assert "Paired question changes" in comparison_html
     assert "Raw output" in comparison_html
     assert "wrong raw output" in comparison_html
+
+
+def test_same_keys_with_different_prompt_are_incomparable(tmp_path) -> None:
+    base, candidate = tmp_path / "a", tmp_path / "b"
+    base_row = row("q1", 1, model="a")
+    changed_row = row("q1", 1, model="b")
+    changed_row.prompt = "different prompt"
+    write_run(base, [base_row], model="a")
+    write_run(candidate, [changed_row], model="b")
+    with pytest.raises(IncomparableRunsError, match="prompt"):
+        compare_run_directories(base, candidate, bootstrap_samples=100)
+
+
+def test_equally_incomplete_runs_cannot_be_compared(tmp_path) -> None:
+    base, candidate = tmp_path / "a", tmp_path / "b"
+    for directory, model in ((base, "a"), (candidate, "b")):
+        write_run(directory, [row("q1", 1, model=model)], model=model)
+        path = directory / "run_manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["request_count"] = 2
+        path.write_text(json.dumps(manifest))
+    with pytest.raises(IncomparableRunsError, match="incomplete"):
+        compare_run_directories(base, candidate, bootstrap_samples=100)
+
+
+def test_provider_and_credential_reference_are_not_scoring_parameters(tmp_path) -> None:
+    base, candidate = tmp_path / "a", tmp_path / "b"
+    for directory, model, provider, key_env in (
+        (base, "a", "openai", "KEY_A"),
+        (candidate, "b", "xai", "KEY_B"),
+    ):
+        write_run(directory, [row("q1", 1, model=model)], model=model)
+        path = directory / "run_manifest.json"
+        manifest = json.loads(path.read_text())
+        manifest["config"].update(api="responses", provider=provider, api_key_env=key_env)
+        path.write_text(json.dumps(manifest))
+    comparison = compare_run_directories(base, candidate, bootstrap_samples=100)
+    assert comparison["comparable"] is True

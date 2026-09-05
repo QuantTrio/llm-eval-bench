@@ -11,22 +11,10 @@ from .data_packs import external_dataset_resources
 from .schemas import DatasetItem
 
 
-def _manifest() -> dict[str, dict[str, Any]]:
+def read_manifest() -> dict[str, dict[str, Any]]:
+    """The metadata for datasets bundled in the wheel."""
     resource = files("llmbench").joinpath("data", "manifest.json")
     return json.loads(resource.read_text(encoding="utf-8"))
-
-
-def list_datasets() -> list[dict[str, Any]]:
-    datasets = {name: dict(metadata) for name, metadata in _manifest().items()}
-    for name, resource in external_dataset_resources().items():
-        if name in datasets:
-            raise ValueError(f"Installed data pack conflicts with built-in dataset {name!r}")
-        datasets[name] = {
-            **resource.metadata,
-            "pack": resource.pack,
-            "pack_version": resource.pack_version,
-        }
-    return [dict(name=name, **metadata) for name, metadata in sorted(datasets.items())]
 
 
 def dataset_metadata(name_or_path: str) -> dict[str, Any]:
@@ -41,9 +29,10 @@ def dataset_metadata(name_or_path: str) -> dict[str, Any]:
             "source": str(candidate.resolve()),
             "recommended_max_tokens": 4096,
         }
-    metadata = _manifest().get(name_or_path)
+    manifest = read_manifest()
+    metadata = manifest.get(name_or_path)
     if metadata is None:
-        external = external_dataset_resources().get(name_or_path)
+        external = external_dataset_resources(exclude_names=manifest).get(name_or_path)
         metadata = external.metadata if external else None
     if metadata is None:
         raise ValueError(f"Unknown dataset '{name_or_path}'")
@@ -75,6 +64,7 @@ def load_dataset(
     if candidate.exists():
         items = _read_jsonl(candidate, source=candidate.stem)
         for item in items:
+            item.metadata["asset_base_dir"] = str(candidate.parent.resolve())
             item.metadata.setdefault("benchmark_category", "Custom")
             item.metadata.setdefault(
                 "benchmark_metric",
@@ -82,25 +72,29 @@ def load_dataset(
             )
             item.metadata.setdefault("recommended_max_tokens", 4096)
     else:
-        manifest = _manifest()
-        external = external_dataset_resources()
-        if name_or_path not in manifest and name_or_path not in external:
-            available = ", ".join(sorted(set(manifest) | set(external)))
-            raise ValueError(
-                f"Unknown dataset '{name_or_path}'. Built-ins: {available}; "
-                "or pass a local JSONL path."
-            )
+        manifest = read_manifest()
         if name_or_path in manifest:
             metadata = manifest[name_or_path]
-            resource = files("llmbench").joinpath("data", metadata["file"])
+            resource_package = "llmbench"
+            resource = files(resource_package).joinpath("data", metadata["file"])
         else:
+            external = external_dataset_resources(exclude_names=manifest)
+            if name_or_path not in external:
+                available = ", ".join(sorted(set(manifest) | set(external)))
+                raise ValueError(
+                    f"Unknown dataset '{name_or_path}'. Built-ins: {available}; "
+                    "or pass a local JSONL path."
+                )
             external_resource = external[name_or_path]
             metadata = external_resource.metadata
-            resource = files(external_resource.package).joinpath(external_resource.file)
+            resource_package = external_resource.package
+            resource = files(resource_package).joinpath(external_resource.file)
         items = _read_jsonl(resource, source=name_or_path)
         for item in items:
-            if name_or_path in external:
-                item.metadata.setdefault("resource_package", external[name_or_path].package)
+            item.metadata["resource_package"] = resource_package
+            for key in ("capability", "adapter"):
+                if key in metadata:
+                    item.metadata.setdefault(key, metadata[key])
             item.metadata.setdefault("benchmark_category", metadata["category"])
             item.metadata.setdefault("benchmark_metric", metadata["metric"])
             item.metadata.setdefault(
