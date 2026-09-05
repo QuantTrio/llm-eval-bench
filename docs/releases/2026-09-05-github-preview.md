@@ -33,3 +33,8 @@ Local checks before upload:
 
 The README change updates wheel metadata, so this published artifact has a different hash
 from the earlier locally tested wheel. Runtime modules and all bundled data are unchanged.
+
+The first hosted CI run exposed a test-package import difference between `python -m pytest`
+and the `pytest` executable. Declaring `tests` as a package fixes both entry points.
+The exact CI command was reproduced in the clean export: 453 passed, 7 optional-data skips.
+This fix changes test collection only, not the published wheel's runtime or data.
